@@ -77,3 +77,23 @@ class PublicationVideo(models.Model):
         related_name='videos'
     )
     video = models.FileField(upload_to='publications/videos/', validators=[validate_file_size, validate_video_format])
+
+
+class Donation(models.Model):
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE, related_name='donations')
+    donor_name = models.CharField(max_length=100)
+    donor_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    donor_email = models.EmailField()
+    donor_phone = PhoneNumberField()
+
+    def __str__(self):
+        return f"{self.donor_name} donated {self.donor_amount} USD"
+
+
+class View(models.Model):
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE, related_name='views')
+    viewer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"User {self.viewer} viewed publication {self.publication.title}"

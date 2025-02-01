@@ -1,5 +1,6 @@
+from django.db.models import Sum
 from rest_framework import serializers
-from .models import Publication, PublicationImage, PublicationVideo
+from .models import Publication, PublicationImage, PublicationVideo, Donation, View
 
 
 class PublicationImageSerializer(serializers.ModelSerializer):
@@ -14,15 +15,28 @@ class PublicationVideoSerializer(serializers.ModelSerializer):
         fields = ['id', 'video']
 
 
+class DonationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Donation
+        fields = ['donor_name', 'donor_amount']
+
+
+class ViewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = View
+        fields = ['viewer', 'viewed_at']
+
+
 class PublicationSerializer(serializers.ModelSerializer):
     images = PublicationImageSerializer(many=True, read_only=True)
     videos = PublicationVideoSerializer(many=True, read_only=True)
-    uploaded_images = serializers.ListField(
-        child=serializers.ImageField(), write_only=True, required=False
-    )
-    uploaded_videos = serializers.ListField(
-        child=serializers.FileField(), write_only=True, required=False
-    )
+    uploaded_images = serializers.ListField(child=serializers.ImageField(), write_only=True, required=False)
+    uploaded_videos = serializers.ListField(child=serializers.FileField(), write_only=True, required=False)
+    donations = DonationSerializer(many=True, read_only=True)
+    donation_percentage = serializers.SerializerMethodField()
+    views = ViewSerializer(many=True, read_only=True)
+    total_views = serializers.SerializerMethodField()
+    total_donated = serializers.SerializerMethodField()
 
     class Meta:
         model = Publication
@@ -30,9 +44,22 @@ class PublicationSerializer(serializers.ModelSerializer):
             'id', 'author', 'title', 'category', 'description',
             'bank_details', 'amount', 'contact_name', 'contact_email',
             'contact_phone', 'created_at', 'updated_at', 'images',
-            'videos', 'uploaded_images', 'uploaded_videos'
+            'videos', 'uploaded_images', 'uploaded_videos', 'donations', 'views', 'donation_percentage',
+            'total_views', 'total_donated'
         ]
         read_only_fields = ['id', 'author', 'created_at', 'updated_at']
+
+    def get_donation_percentage(self, obj):
+        total_donations = obj.donations.aggregate(total=Sum('donor_amount'))['total'] or 0
+        if obj.amount:
+            return (total_donations / obj.amount) * 100
+        return 0
+
+    def get_total_views(self, obj):
+        return obj.views.count()
+
+    def get_total_donated(self, obj):
+        return obj.donations.aggregate(total=Sum('donor_amount'))['total'] or 0
 
     def create(self, validated_data):
         uploaded_images = validated_data.pop('uploaded_images', [])
