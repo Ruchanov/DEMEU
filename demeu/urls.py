@@ -28,5 +28,5 @@ urlpatterns = [
 ]
 
 # Добавляем маршруты для обработки медиафайлов (например, аватары)
-if settings.DEBUG:  # Только для отладки. В продакшене используйте Nginx или другой сервер для медиа.
+if settings.DEBUG:  # Только для отладки. В продакшене используем Nginx или другой сервер для медиа.
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

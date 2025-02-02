@@ -1,3 +1,5 @@
+import os
+
 from django.db import models
 from django.conf import settings
 from datetime import date
@@ -17,6 +19,19 @@ class Profile(models.Model):
 
     birth_date = models.DateField(blank=True, null=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            try:
+                old_avatar = Profile.objects.get(pk=self.pk).avatar
+                if old_avatar and old_avatar != self.avatar:
+                    if os.path.isfile(old_avatar.path):
+                        os.remove(old_avatar.path)
+            except Profile.DoesNotExist:
+                pass
+
+        super().save(*args, **kwargs)
+
 
     def calculate_age(self):
         if self.birth_date:

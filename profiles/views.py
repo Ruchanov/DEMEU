@@ -15,3 +15,12 @@ class ProfileDetailView(generics.RetrieveUpdateAPIView):
         if not hasattr(user, 'profile'):
             raise NotFound("User profile does not exist")
         return user.profile
+
+    def perform_update(self, serializer):
+        profile = self.get_object()
+        old_avatar = profile.avatar
+
+        serializer.save()
+
+        if old_avatar and old_avatar != profile.avatar:
+            old_avatar.delete(save=False)
