@@ -54,6 +54,12 @@ class User(AbstractBaseUser):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name"]
 
+    def has_perm(self, perm, obj=None):
+        return self.is_superuser
+
+    def has_module_perms(self, app_label):
+        return self.is_superuser
+
     def set_verification_token(self, token):
         self.verification_token_hash = hashlib.sha256(token.encode()).hexdigest()
 
