@@ -25,6 +25,7 @@ urlpatterns = [
     path('publications/', include('publications.urls')),
     path('comments/', include('comments.urls')),
     path('favorites/', include('favorites.urls')),
+    path('info/', include('info.urls')),
 ]
 
 # Добавляем маршруты для обработки медиафайлов (например, аватары)
