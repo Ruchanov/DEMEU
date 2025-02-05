@@ -5,8 +5,8 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 
 def validate_phone_number(value):
-    if not re.match(r'^\+7\d{10}$', value):
-        raise ValidationError("The phone number must start with +7 and contain 11 digits.")
+    if not re.match(r'^\+\d{10,15}$', value):
+        raise ValidationError("The phone number must start with '+' and contain between 10 and 15 digits.")
 
 def validate_file_size(file):
     max_size = 10 * 1024 * 1024  # 10 MB
