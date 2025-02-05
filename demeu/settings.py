@@ -79,18 +79,18 @@ REST_FRAMEWORK = {
     ),
 }
 
-# SIMPLE_JWT = {
-#     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-#     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-#     'ROTATE_REFRESH_TOKENS': False,
-#     'BLACKLIST_AFTER_ROTATION': True,
-#     'ALGORITHM': 'HS256',
-#     'SIGNING_KEY': 'difj2034*@()98sd*@)(',
-#
-#     'AUTH_HEADER_TYPES': ('Bearer', 'Token', 'JWT'),
-#     'USER_ID_FIELD': 'pk',
-#     'USER_ID_CLAIM': 'user_id',
-# }
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': 'difj2034*@()98sd*@)(',
+
+    'AUTH_HEADER_TYPES': ('Bearer', 'Token', 'JWT'),
+    'USER_ID_FIELD': 'pk',
+    'USER_ID_CLAIM': 'user_id',
+}
 
 
 ROOT_URLCONF = 'demeu.urls'
