@@ -1,3 +1,4 @@
+import os
 from rest_framework import generics, permissions
 from rest_framework.exceptions import NotFound
 
@@ -23,4 +24,5 @@ class ProfileDetailView(generics.RetrieveUpdateAPIView):
         serializer.save()
 
         if old_avatar and old_avatar != profile.avatar:
-            old_avatar.delete(save=False)
+            if old_avatar.path and os.path.exists(old_avatar.path):
+                old_avatar.delete(save=False)
