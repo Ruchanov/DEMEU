@@ -44,6 +44,7 @@ class User(AbstractBaseUser):
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
+    google_id = models.CharField(max_length=50, null=True, blank=True, unique=True)
     verification_token_hash = models.CharField(max_length=255, null=True, blank=True)
     verification_token_expiry = models.DateTimeField(null=True, blank=True)
     failed_attempts = models.PositiveIntegerField(default=0)
