@@ -1,10 +1,15 @@
-from django.db.models import Sum, Count
+import re
+from django.db.models import Sum, Count, Q
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Publication, View, Donation
 from .serializers import PublicationSerializer, DonationSerializer
+
+
+def normalize_text(text):
+    return re.sub(r'[^\w\s]', '', text.lower())
 
 
 @api_view(['GET', 'POST'])
@@ -15,8 +20,58 @@ def publication_list(request):
             total_donated=Sum('donations__donor_amount'),
             total_views=Count('views'),
         )
-        for pub in publications:
-            pub.donation_percentage = (pub.total_donated or 0) / (pub.amount or 1) * 100
+        search = request.GET.get('search', '').strip().lower()
+        if search:
+            search_words = search.split()  # Разбиваем строку на слова
+            # print(f"Поисковый запрос: {search_words}")  # Логируем введенные слова
+
+            if len(search_words) <= 2:
+                # 🔍 Если 1-2 слова → ищем любое из слов (логика OR)
+                query = Q()
+                for word in search_words:
+                    word_normalized = normalize_text(word)  # Удаляем знаки
+                    query |= (
+                            Q(description__icontains=word_normalized) |
+                            Q(title__icontains=word_normalized) |
+                            Q(author__email__icontains=word_normalized)
+                    )
+                publications = publications.filter(query)
+            else:
+                # 🔍 Если 3+ слова → ищем полное совпадение текста (логика AND)
+                normalized_search = normalize_text(search)
+                publications = publications.filter(
+                    Q(description__icontains=normalized_search) |
+                    Q(title__icontains=normalized_search) |
+                    Q(author__email__icontains=normalized_search)
+                )
+
+        #Фильтрация
+        category = request.GET.get('category')
+        if category:
+            publications = publications.filter(category=category)
+
+        created_at_gte = request.GET.get('created_at__gte')
+        created_at_lte = request.GET.get('created_at__lte')
+        if created_at_gte and created_at_lte:
+            publications = publications.filter(created_at__gte=created_at_gte, created_at__lte=created_at_lte)
+
+        amount_gte = request.GET.get('amount__gte')
+        amount_lte = request.GET.get('amount__lte')
+        if amount_gte and amount_lte:
+            publications = publications.filter(amount__gte=amount_gte, amount__lte=amount_lte)
+
+        total_donated_gte = request.GET.get('total_donated__gte')
+        total_donated_lte = request.GET.get('total_donated__lte')
+        if total_donated_gte and total_donated_lte:
+            publications = publications.filter(total_donated__gte=total_donated_gte,
+                                               total_donated__lte=total_donated_lte)
+
+        #Сортировка
+        ordering = request.GET.get('ordering', '-created_at')  # По умолчанию сортируем по дате
+        if ordering in ['created_at', '-created_at', 'total_views', '-total_views', 'total_donated', '-total_donated']:
+            publications = publications.order_by(ordering)
+
+        # print(f" SQL-запрос: {str(publications.query)}")  # Логируем SQL-запрос
 
         serializer = PublicationSerializer(publications, many=True)
         return Response(serializer.data)
