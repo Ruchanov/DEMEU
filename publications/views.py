@@ -46,9 +46,11 @@ def publication_list(request):
                 )
 
         #Фильтрация
-        category = request.GET.get('category')
-        if category:
-            publications = publications.filter(category=category)
+        categories = request.GET.get('category')
+        if categories:
+            category_list = [c.strip() for c in categories.split(',')]  # Разбиваем строку на список
+            publications = publications.filter(category__in=category_list)
+
 
         created_at_gte = request.GET.get('created_at__gte')
         created_at_lte = request.GET.get('created_at__lte')
