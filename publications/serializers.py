@@ -1,6 +1,6 @@
 from django.db.models import Sum
 from rest_framework import serializers
-from .models import Publication, PublicationImage, PublicationVideo, Donation, View
+from .models import Publication, PublicationImage, PublicationVideo, Donation, View, PublicationDocument
 
 
 class PublicationImageSerializer(serializers.ModelSerializer):
@@ -75,3 +75,10 @@ class PublicationSerializer(serializers.ModelSerializer):
             PublicationVideo.objects.create(publication=publication, video=video)
 
         return publication
+
+
+class PublicationDocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PublicationDocument
+        fields = ['id', 'document_type', 'file', 'uploaded_at']
+        read_only_fields = ['id', 'uploaded_at']

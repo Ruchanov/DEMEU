@@ -27,6 +27,17 @@ def validate_bank_details(value):
     if len(value) < 8 or len(value) > 30:
         raise ValidationError("Введите корректный номер карты.")
 
+# Функция для хранения документов в каталоге MEDIA_ROOT/documents/publication_<id>/
+def publication_document_path(instance, filename):
+    return f"documents/publication_{instance.publication.id}/{instance.document_type}/{filename}"
+
+
+# Валидация форматов файлов
+def validate_document_format(file):
+    valid_formats = ['jpg', 'jpeg', 'png', 'pdf']
+    if not file.name.split('.')[-1].lower() in valid_formats:
+        raise ValidationError("Разрешены только файлы форматов JPG, JPEG, PNG, PDF.")
+
 
 # Models
 class Publication(models.Model):
@@ -80,6 +91,30 @@ class PublicationImage(models.Model):
 class PublicationVideo(models.Model):
     publication = models.ForeignKey(Publication, on_delete=models.CASCADE, related_name='videos')
     video = models.FileField(upload_to='publications/videos/', validators=[validate_file_size, validate_video_format])
+
+
+# Типы документов
+DOCUMENT_TYPES = [
+    ('identity', 'Удостоверение личности'),
+    ('income', 'Справка о доходах'),
+    ('supporting', 'Подтверждающие документы'),
+]
+
+
+# Модель документа
+class PublicationDocument(models.Model):
+    publication = models.ForeignKey(
+        'Publication', on_delete=models.CASCADE, related_name='documents'
+    )
+    document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPES)
+    file = models.FileField(
+        upload_to=publication_document_path,
+        validators=[validate_document_format, validate_file_size]
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.publication.title} - {self.get_document_type_display()}"
 
 
 class Donation(models.Model):

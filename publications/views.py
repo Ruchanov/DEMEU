@@ -4,8 +4,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Publication, View, Donation
-from .serializers import PublicationSerializer, DonationSerializer
+from .models import Publication, View, Donation, PublicationDocument
+from .serializers import PublicationSerializer, DonationSerializer, PublicationDocumentSerializer
 
 
 def normalize_text(text):
@@ -124,6 +124,45 @@ def publication_detail(request, pk):
 
         publication.delete()
         return Response({"message": "Publication deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_document(request, publication_id):
+    """Загрузка документа"""
+    try:
+        publication = Publication.objects.get(id=publication_id)
+    except Publication.DoesNotExist:
+        return Response({"error": "Publication not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = PublicationDocumentSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save(publication=publication)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_documents(request, publication_id):
+    documents = PublicationDocument.objects.filter(publication_id=publication_id)
+    serializer = PublicationDocumentSerializer(documents, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_document(request, document_id):
+    try:
+        document = PublicationDocument.objects.get(id=document_id)
+    except PublicationDocument.DoesNotExist:
+        return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.user != document.publication.author:
+        return Response({"error": "You don't have permission to delete this document."}, status=status.HTTP_403_FORBIDDEN)
+
+    document.delete()
+    return Response({"message": "Document deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['POST'])
