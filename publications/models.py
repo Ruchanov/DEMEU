@@ -1,3 +1,5 @@
+import os
+import uuid
 from django.utils import timezone
 from django.db import models
 from django.conf import settings
@@ -30,14 +32,20 @@ def validate_bank_details(value):
 
 # Функция для хранения документов в каталоге MEDIA_ROOT/documents/publication_<id>/
 def publication_document_path(instance, filename):
-    return f"documents/publication_{instance.publication.id}/{instance.document_type}/{filename}"
-
+    ext = filename.split('.')[-1]
+    filename = f"publication_{instance.publication.id}_{instance.document_type}_{uuid.uuid4().hex}.{ext}"
+    return os.path.join("documents", f"publication_{instance.publication.id}", instance.document_type, filename)
 
 # Валидация форматов файлов
 def validate_document_format(file):
     valid_formats = ['jpg', 'jpeg', 'png', 'pdf']
     if not file.name.split('.')[-1].lower() in valid_formats:
         raise ValidationError("Разрешены только файлы форматов JPG, JPEG, PNG, PDF.")
+
+
+def limit_publication_documents(instance):
+    if instance.publication.documents.count() >= 5:
+        raise ValidationError("Нельзя загружать более 5 документов на одну публикацию.")
 
 
 # Models
@@ -119,7 +127,6 @@ class PublicationDocument(models.Model):
 
     def __str__(self):
         return f"{self.publication.title} - {self.get_document_type_display()}"
-
 
 class Donation(models.Model):
     publication = models.ForeignKey(Publication, on_delete=models.CASCADE, related_name='donations')

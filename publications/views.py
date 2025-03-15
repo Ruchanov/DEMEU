@@ -1,4 +1,8 @@
+import os
 import re
+
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
 from rest_framework.decorators import api_view, permission_classes
@@ -166,6 +170,33 @@ def delete_document(request, document_id):
 
     document.delete()
     return Response({"message": "Document deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+
+
+@receiver(pre_delete, sender=PublicationDocument)
+def delete_document_file(sender, instance, **kwargs):
+    if instance.file:
+        if os.path.exists(instance.file.path):
+            os.remove(instance.file.path)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_document(request, document_id):
+    try:
+        document = PublicationDocument.objects.get(id=document_id)
+    except PublicationDocument.DoesNotExist:
+        return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.user != document.publication.author:
+        return Response({"error": "You don't have permission to update this document."},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    serializer = PublicationDocumentSerializer(document, data=request.data, partial=True)
+    if serializer.is_valid():
+        document.file.delete()  # Удаляем старый файл перед заменой
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])

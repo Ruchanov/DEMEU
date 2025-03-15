@@ -49,16 +49,21 @@ class PublicationSerializer(serializers.ModelSerializer):
     total_views = serializers.SerializerMethodField()
     total_donated = serializers.SerializerMethodField()
     total_comments = serializers.SerializerMethodField()
+    author_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Publication
         fields = [
-            'id', 'author', 'title', 'category', 'description',
+            'id', 'author_name', 'title', 'category', 'description',
             'bank_details', 'amount', 'contact_name', 'contact_email',
             'contact_phone', 'created_at', 'updated_at', 'images',
             'videos', 'uploaded_images', 'uploaded_videos', 'donations', 'views', 'donation_percentage',
             'total_views', 'total_donated', 'total_comments']
         read_only_fields = ['id', 'author', 'created_at', 'updated_at']
+
+
+    def get_author_name(self, obj):
+        return f"{obj.author.first_name} {obj.author.last_name}" if obj.author else None
 
     def get_donation_percentage(self, obj):
         total_donations = obj.donations.aggregate(total=Sum('donor_amount'))['total'] or 0
