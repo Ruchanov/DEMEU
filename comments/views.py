@@ -61,39 +61,39 @@ def comment_list_create(request, publication_id):
         comment.delete()
         return Response({"message": "Comment deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
 
-#
-# @api_view(['GET', 'PUT', 'DELETE'])
-# @permission_classes([permissions.IsAuthenticated])
-# def comment_detail(request, pk):
-#     try:
-#         comment = Comment.objects.get(pk=pk)
-#     except Comment.DoesNotExist:
-#         return Response({"error": "Comment not found."}, status=status.HTTP_404_NOT_FOUND)
-#
-#     #Проверка прав доступа
-#     if request.method in ['PUT', 'DELETE'] and comment.author != request.user:
-#         return Response({"error": "You do not have permission to modify or delete this comment."},
-#                             status=status.HTTP_403_FORBIDDEN)
-#
-#     if request.method == 'GET':
-#         serializer = CommentSerializer(comment)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-#
-#     elif request.method == 'PUT':
-#         if comment.author != request.user:
-#             return Response({"error": "You do not have permission to edit this comment."},
-#                             status=status.HTTP_403_FORBIDDEN)
-#
-#         serializer = CommentSerializer(comment, data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_200_OK)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#
-#     elif request.method == 'DELETE':
-#         if comment.author != request.user:
-#             return Response({"error": "You do not have permission to delete this comment."},
-#                             status=status.HTTP_403_FORBIDDEN)
-#
-#         comment.delete()
-#         return Response({"message": "Comment deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+def comment_detail(request, pk):
+    try:
+        comment = Comment.objects.get(pk=pk)
+    except Comment.DoesNotExist:
+        return Response({"error": "Comment not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    #Проверка прав доступа
+    if request.method in ['PUT', 'DELETE'] and comment.author != request.user:
+        return Response({"error": "You do not have permission to modify or delete this comment."},
+                            status=status.HTTP_403_FORBIDDEN)
+
+    if request.method == 'GET':
+        serializer = CommentSerializer(comment)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    elif request.method == 'PUT':
+        if comment.author != request.user:
+            return Response({"error": "You do not have permission to edit this comment."},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        serializer = CommentSerializer(comment, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        if comment.author != request.user:
+            return Response({"error": "You do not have permission to delete this comment."},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        comment.delete()
+        return Response({"message": "Comment deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
