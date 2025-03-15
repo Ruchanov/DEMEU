@@ -1,4 +1,5 @@
 import re
+from django.utils import timezone
 from django.db.models import Sum, Count, Q
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
@@ -187,6 +188,6 @@ def top_donors(request, publication_id):
     except Publication.DoesNotExist:
         return Response({"error": "Publication not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    top_donors = publication.donations.order_by('-donor_amount')[:5]
+    top_donors = publication.donations.order_by('-donor_amount', '-created_at')[:5]
     serializer = DonationSerializer(top_donors, many=True)
     return Response(serializer.data)

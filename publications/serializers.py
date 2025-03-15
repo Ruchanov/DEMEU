@@ -18,7 +18,7 @@ class PublicationVideoSerializer(serializers.ModelSerializer):
 class DonationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Donation
-        fields = ['donor_name', 'donor_amount']
+        fields = ['donor_name', 'donor_amount', 'created_at']
 
 
 class ViewSerializer(serializers.ModelSerializer):
