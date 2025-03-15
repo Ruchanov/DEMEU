@@ -31,6 +31,11 @@ def comment_detail(request, pk):
     except Comment.DoesNotExist:
         return Response({"error": "Comment not found."}, status=status.HTTP_404_NOT_FOUND)
 
+    #Проверка прав доступа
+    if request.method in ['PUT', 'DELETE'] and comment.author != request.user:
+        return Response({"error": "You do not have permission to modify or delete this comment."},
+                            status=status.HTTP_403_FORBIDDEN)
+
     if request.method == 'GET':
         serializer = CommentSerializer(comment)
         return Response(serializer.data, status=status.HTTP_200_OK)
