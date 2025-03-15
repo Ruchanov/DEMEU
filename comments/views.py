@@ -9,12 +9,12 @@ from .serializers import CommentSerializer
 @permission_classes([permissions.IsAuthenticatedOrReadOnly])
 def comment_list_create(request, publication_id):
     if request.method == 'GET':
-        comments = Comment.objects.filter(publication_id=publication_id)
-        serializer = CommentSerializer(comments, many=True)
+        comments = Comment.objects.filter(publication_id=publication_id).order_by('-created_at')
+        serializer = CommentSerializer(comments, many=True, context={'request': request})
         return Response(serializer.data)
 
     elif request.method == 'POST':
-        serializer = CommentSerializer(data=request.data, context={'publication_id': publication_id})
+        serializer = CommentSerializer(data=request.data, context={'request': request, 'publication_id': publication_id})
 
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
