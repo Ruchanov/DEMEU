@@ -48,6 +48,7 @@ class PublicationSerializer(serializers.ModelSerializer):
     views = ViewSerializer(many=True, read_only=True)
     total_views = serializers.SerializerMethodField()
     total_donated = serializers.SerializerMethodField()
+    total_comments = serializers.SerializerMethodField()
 
     class Meta:
         model = Publication
@@ -56,8 +57,7 @@ class PublicationSerializer(serializers.ModelSerializer):
             'bank_details', 'amount', 'contact_name', 'contact_email',
             'contact_phone', 'created_at', 'updated_at', 'images',
             'videos', 'uploaded_images', 'uploaded_videos', 'donations', 'views', 'donation_percentage',
-            'total_views', 'total_donated'
-        ]
+            'total_views', 'total_donated', 'total_comments']
         read_only_fields = ['id', 'author', 'created_at', 'updated_at']
 
     def get_donation_percentage(self, obj):
@@ -71,6 +71,9 @@ class PublicationSerializer(serializers.ModelSerializer):
 
     def get_total_donated(self, obj):
         return obj.donations.aggregate(total=Sum('donor_amount'))['total'] or 0
+
+    def get_total_comments(self, obj):
+        return obj.comments.count()
 
     def create(self, validated_data):
         uploaded_images = validated_data.pop('uploaded_images', [])

@@ -20,6 +20,7 @@ def publication_list(request):
         publications = Publication.objects.annotate(
             total_donated=Sum('donations__donor_amount'),
             total_views=Count('views'),
+            total_comments=Count('comments'),
         )
         search = request.GET.get('search', '').strip().lower()
         if search:
@@ -27,7 +28,7 @@ def publication_list(request):
             # print(f"Поисковый запрос: {search_words}")  # Логируем введенные слова
 
             if len(search_words) <= 2:
-                # 🔍 Если 1-2 слова → ищем любое из слов (логика OR)
+                #Если 1-2 слова → ищем любое из слов (логика OR)
                 query = Q()
                 for word in search_words:
                     word_normalized = normalize_text(word)  # Удаляем знаки
@@ -38,7 +39,7 @@ def publication_list(request):
                     )
                 publications = publications.filter(query)
             else:
-                # 🔍 Если 3+ слова → ищем полное совпадение текста (логика AND)
+                #Если 3+ слова → ищем полное совпадение текста (логика AND)
                 normalized_search = normalize_text(search)
                 publications = publications.filter(
                     Q(description__icontains=normalized_search) |
@@ -94,6 +95,7 @@ def publication_detail(request, pk):
         publication = Publication.objects.annotate(
             total_donated=Sum('donations__donor_amount'),
             total_views=Count('views'),
+            total_comments=Count('comments')
         ).get(pk=pk)
     except Publication.DoesNotExist:
         return Response({"error": "Publication not found."}, status=status.HTTP_404_NOT_FOUND)

@@ -76,6 +76,9 @@ class Publication(models.Model):
     def total_views(self):
         return self.views.count()
 
+    def total_comments(self):
+        return self.comments.count()
+
     def donation_percentage(self):
         total = self.total_donated()
         return (total / self.amount) * 100 if self.amount else 0
