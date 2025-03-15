@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import publication_list, publication_detail, donation_create, top_donors, list_documents, upload_document, \
-    delete_document
+    delete_document, recommended_publications
 
 urlpatterns = [
     path('', publication_list, name='publication-list'),
@@ -10,5 +10,6 @@ urlpatterns = [
     path('documents/<int:document_id>/delete/', delete_document, name='document-delete'),
     path('<int:publication_id>/donate/', donation_create, name='donation-create'),
     path('<int:publication_id>/top-donors/', top_donors, name='top-donors'),
+    path('recommended/', recommended_publications, name='recommended-publications'),
 
 ]

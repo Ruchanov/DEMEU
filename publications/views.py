@@ -193,3 +193,44 @@ def top_donors(request, publication_id):
     top_donors = publication.donations.order_by('-donor_amount', '-created_at')[:5]
     serializer = DonationSerializer(top_donors, many=True, context={'request': request})
     return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def recommended_publications(request):
+    user = request.user
+
+    # Получаем категории, которые пользователь чаще всего просматривал
+    viewed_categories = list(
+        View.objects.filter(viewer=user)
+        .values_list('publication__category', flat=True)
+        .annotate(count=Count('id'))
+        .order_by('-count')
+    )
+
+    # Получаем категории, на которые пользователь жертвовал
+    donated_categories = list(
+        Donation.objects.filter(publication__author=user)
+        .values_list('publication__category', flat=True)
+        .annotate(count=Count('id'))
+        .order_by('-count')
+    )
+
+    # Объединяем списки категорий и удаляем дубликаты
+    preferred_categories = list(set(viewed_categories + donated_categories))
+
+    # Получаем публикации из предпочтительных категорий
+    recommended_posts = Publication.objects.filter(category__in=preferred_categories).exclude(author=user)
+
+    # Если у пользователя нет истории, просто берем самые популярные посты
+    if not recommended_posts.exists():
+        recommended_posts = (
+            Publication.objects.annotate(
+                total_donations=Sum('donations__donor_amount'),
+                total_views=Count('views')
+            )
+            .order_by('-total_donations', '-total_views')[:5]
+        )
+
+    serializer = PublicationSerializer(recommended_posts, many=True)
+    return Response(serializer.data)
