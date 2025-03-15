@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Publication, PublicationImage, PublicationVideo, Donation, View
+from .models import Publication, PublicationImage, PublicationVideo, Donation, View, PublicationDocument
 
 
 class PublicationImageInline(admin.TabularInline):
@@ -40,6 +40,13 @@ class ViewAdmin(admin.ModelAdmin):
     list_filter = ('viewed_at',)
 
 
+class PublicationDocumentAdmin(admin.ModelAdmin):
+    list_display = ('publication', 'document_type', 'file', 'uploaded_at')
+    search_fields = ('publication__title', 'document_type')
+    list_filter = ('document_type', 'uploaded_at')
+
+
 admin.site.register(Publication, PublicationAdmin)
 admin.site.register(Donation, DonationAdmin)
 admin.site.register(View, ViewAdmin)
+admin.site.register(PublicationDocument, PublicationDocumentAdmin)
