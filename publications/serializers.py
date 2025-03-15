@@ -1,6 +1,7 @@
 from django.db.models import Sum
 from rest_framework import serializers
 from .models import Publication, PublicationImage, PublicationVideo, Donation, View, PublicationDocument
+from profiles.models import Profile
 
 
 class PublicationImageSerializer(serializers.ModelSerializer):
@@ -16,9 +17,19 @@ class PublicationVideoSerializer(serializers.ModelSerializer):
 
 
 class DonationSerializer(serializers.ModelSerializer):
+    avatar = serializers.SerializerMethodField()
+
     class Meta:
         model = Donation
-        fields = ['donor_name', 'donor_amount', 'created_at']
+        fields = ['donor_name', 'donor_amount', 'avatar','created_at']
+
+    def get_avatar(self, obj):
+        user = obj.publication.author
+        if hasattr(user, 'profile') and user.profile.avatar:
+            request = self.context.get('request')
+            avatar_url = user.profile.avatar.url
+            return request.build_absolute_uri(avatar_url) if request else avatar_url
+        return None
 
 
 class ViewSerializer(serializers.ModelSerializer):

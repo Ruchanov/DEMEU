@@ -174,7 +174,7 @@ def donation_create(request, publication_id):
     except Publication.DoesNotExist:
         return Response({"error": "Publication not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    serializer = DonationSerializer(data=request.data)
+    serializer = DonationSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
         serializer.save(publication=publication)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -189,5 +189,5 @@ def top_donors(request, publication_id):
         return Response({"error": "Publication not found."}, status=status.HTTP_404_NOT_FOUND)
 
     top_donors = publication.donations.order_by('-donor_amount', '-created_at')[:5]
-    serializer = DonationSerializer(top_donors, many=True)
+    serializer = DonationSerializer(top_donors, many=True, context={'request': request})
     return Response(serializer.data)
