@@ -66,3 +66,14 @@ class Profile(models.Model):
 
     def __str__(self):
         return f"{self.user.email}'s Profile"
+
+class ProfileView(models.Model):
+    profile = models.ForeignKey("profiles.Profile", on_delete=models.CASCADE, related_name="views")
+    viewer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('profile', 'viewer')
+
+    def __str__(self):
+        return f"{self.viewer.email} viewed {self.profile.user.email}'s profile"
