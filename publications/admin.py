@@ -12,13 +12,20 @@ class PublicationVideoInline(admin.TabularInline):
     extra = 1  # Позволяет загружать дополнительные видео
 
 
+class PublicationDocumentInline(admin.TabularInline):
+    model = PublicationDocument
+    extra = 1  # Позволяет загружать дополнительные документы
+    fields = ('document_type', 'file', 'uploaded_at')
+    readonly_fields = ('uploaded_at',)
+
+
 class PublicationAdmin(admin.ModelAdmin):
     list_display = ('title', 'author', 'category', 'amount', 'created_at')
     search_fields = ('title', 'author__email', 'category')
     list_filter = ('category', 'created_at')
     ordering = ('-created_at',)
     readonly_fields = ('created_at', 'updated_at')
-    inlines = [PublicationImageInline, PublicationVideoInline]
+    inlines = [PublicationImageInline, PublicationVideoInline, PublicationDocumentInline]
 
     fieldsets = (
         ('Основная информация', {'fields': ('author', 'title', 'category', 'description')}),
