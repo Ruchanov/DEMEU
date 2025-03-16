@@ -97,7 +97,15 @@ class PublicationSerializer(serializers.ModelSerializer):
 
 
 class PublicationDocumentSerializer(serializers.ModelSerializer):
+    preview = serializers.SerializerMethodField()
+
     class Meta:
         model = PublicationDocument
-        fields = ['id', 'document_type', 'file', 'uploaded_at']
+        fields = ['id', 'document_type', 'file', 'preview', 'uploaded_at']
         read_only_fields = ['id', 'uploaded_at']
+
+    def get_preview(self, obj):
+        if obj.file and obj.file.url.endswith(('jpg', 'jpeg', 'png')):
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.file.url) if request else obj.file.url
+        return None

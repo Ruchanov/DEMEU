@@ -187,6 +187,9 @@ def update_document(request, document_id):
     except PublicationDocument.DoesNotExist:
         return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
 
+    print(f"Автор публикации: {document.publication.author}")
+    print(f"Пользователь, который делает запрос: {request.user}")
+
     if request.user != document.publication.author:
         return Response({"error": "You don't have permission to update this document."},
                         status=status.HTTP_403_FORBIDDEN)
