@@ -31,9 +31,9 @@ def favorite_publication_list_create(request):
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
-def favorite_publication_delete(request, pk):
+def favorite_publication_delete(request, publication_id):
     try:
-        favorite = FavoritePublication.objects.get(id=pk, user=request.user)
+        favorite = FavoritePublication.objects.get(user=request.user, publication_id=publication_id)
     except FavoritePublication.DoesNotExist:
         return Response({"error": "Favorite publication not found."}, status=status.HTTP_404_NOT_FOUND)
 
