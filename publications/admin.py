@@ -36,9 +36,14 @@ class PublicationAdmin(admin.ModelAdmin):
 
 
 class DonationAdmin(admin.ModelAdmin):
-    list_display = ('donor_name', 'donor_amount', 'publication')
-    search_fields = ('donor_name', 'donor_email', 'publication__title')
+    list_display = ['get_donor_name', 'donor_amount', 'publication', 'created_at']
+    search_fields = ('donor__username', 'donor__email', 'publication__title')
     list_filter = ('publication',)
+
+    def get_donor_name(self, obj):
+        return obj.donor.username if obj.donor else "Anonymous"
+
+    get_donor_name.short_description = "Donor Name"
 
 
 class ViewAdmin(admin.ModelAdmin):

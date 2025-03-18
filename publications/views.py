@@ -4,7 +4,8 @@ import re
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 from django.utils import timezone
-from django.db.models import Sum, Count, Q
+from decimal import Decimal
+from django.db.models import Sum, Count, Q, F, FloatField, Avg
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.response import Response
@@ -136,7 +137,6 @@ def publication_detail(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_document(request, publication_id):
-    """Загрузка документа"""
     try:
         publication = Publication.objects.get(id=publication_id)
     except Publication.DoesNotExist:
@@ -210,10 +210,14 @@ def donation_create(request, publication_id):
     except Publication.DoesNotExist:
         return Response({"error": "Publication not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    serializer = DonationSerializer(data=request.data, context={'request': request})
+    data = request.data.copy()
+    data['donor'] = request.user.id
+
+    serializer = DonationSerializer(data=data, context={'request': request})
     if serializer.is_valid():
-        serializer.save(publication=publication)
+        serializer.save(publication=publication, donor=request.user)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -226,6 +230,61 @@ def top_donors(request, publication_id):
 
     top_donors = publication.donations.order_by('-donor_amount', '-created_at')[:5]
     serializer = DonationSerializer(top_donors, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
+
+@api_view(['GET'])
+def top_publications(request):
+    two_months_ago = timezone.now() - timezone.timedelta(days=60)
+
+    publications = Publication.objects.filter(created_at__gte=two_months_ago)
+
+    publications = publications.annotate(
+        total_donated=Sum('donations__donor_amount', default=0),
+        total_views=Count('views', distinct=True),
+        total_comments=Count('comments', distinct=True),
+    )
+
+    # Динамически рассчитываем средние суммы пожертвований по категориям
+    category_averages = Publication.objects.values('category').annotate(
+        avg_donation=Avg('donations__donor_amount')
+    )
+
+    category_averages_dict = {item['category']: float(item['avg_donation'] or 50000) for item in category_averages}
+
+    for publication in publications:
+        total_donated = float(getattr(publication, 'total_donated', Decimal(0)))
+        total_views = float(getattr(publication, 'total_views', 0))
+        total_comments = float(getattr(publication, 'total_comments', 0))
+
+        # Количество дней с момента создания публикации
+        days_old = (timezone.now() - publication.created_at).days + 1  # +1 чтобы не делить на 0
+
+        # Коэффициент свежести (старые публикации затухают)
+        freshness_factor = max(0.5, 1 - 0.01 * days_old)
+
+        # Скорость пожертвований (важно, как быстро собираются деньги)
+        donation_rate = total_donated / days_old
+
+        # Коэффициент категории (балансируем популярные и непопулярные категории)
+        category_factor = 1 + (category_averages_dict.get(publication.category, 50000) / 50000) * 0.2
+
+        # Коэффициент вовлеченности пользователей (уникальные пользователи в комментариях)
+        active_users = publication.comments.values('author').distinct().count()
+        engagement_boost = 1 + (active_users / 50)
+
+        # Финальный расчет рейтинга
+        publication.score = (
+                (total_donated * 0.5 + total_views * 0.3 + total_comments * 0.2 + donation_rate * 0.5)
+                * freshness_factor * category_factor * engagement_boost
+        )
+
+    publications = [p for p in publications if p.total_donated > 0 or p.total_views > 0 or p.total_comments > 0]
+
+    top_publications = sorted(publications, key=lambda p: p.score, reverse=True)[:10]
+
+    serializer = PublicationSerializer(top_publications, many=True)
     return Response(serializer.data)
 
 

@@ -18,18 +18,23 @@ class PublicationVideoSerializer(serializers.ModelSerializer):
 
 class DonationSerializer(serializers.ModelSerializer):
     avatar = serializers.SerializerMethodField()
+    donor_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Donation
         fields = ['donor_name', 'donor_amount', 'avatar','created_at']
 
     def get_avatar(self, obj):
-        user = obj.publication.author
-        if hasattr(user, 'profile') and user.profile.avatar:
+        if obj.donor and hasattr(obj.donor, 'profile') and obj.donor.profile.avatar:
             request = self.context.get('request')
-            avatar_url = user.profile.avatar.url
+            avatar_url = obj.donor.profile.avatar.url
             return request.build_absolute_uri(avatar_url) if request else avatar_url
         return None
+
+    def get_donor_name(self, obj):
+        if obj.donor:
+            return f"{obj.donor.first_name} {obj.donor.last_name}".strip()
+        return "Anonymous"
 
 
 class ViewSerializer(serializers.ModelSerializer):
@@ -137,36 +142,26 @@ class PublicationSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         uploaded_images = validated_data.pop('uploaded_images', [])
         uploaded_videos = validated_data.pop('uploaded_videos', [])
-        uploaded_documents = validated_data.pop('uploaded_documents', [])
-        uploaded_document_types = validated_data.pop('uploaded_document_types', [])
 
         update_images = validated_data.pop('update_images', 'add')  # 'add' or 'replace'
         update_videos = validated_data.pop('update_videos', 'add')  # 'add' or 'replace'
-        update_documents = validated_data.pop('update_documents', 'add')  # 'add' or 'replace'
 
-        if uploaded_documents and len(uploaded_documents) != len(uploaded_document_types):
-            raise serializers.ValidationError("Каждый документ должен иметь соответствующий тип.")
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+
         instance.save()
 
         # Обновление изображений
-        if update_images == 'replace':
+        if update_images == 'replace' and uploaded_images:  # Удаляем только если есть новые файлы
             instance.images.all().delete()
         for image in uploaded_images:
             PublicationImage.objects.create(publication=instance, image=image)
 
         # Обновление видео
-        if update_videos == 'replace':
+        if update_videos == 'replace' and uploaded_videos:  # Удаляем только если есть новые файлы
             instance.videos.all().delete()
         for video in uploaded_videos:
             PublicationVideo.objects.create(publication=instance, video=video)
-
-        # Обновление документов
-        if update_documents == 'replace':
-            instance.documents.all().delete()
-        for document, doc_type in zip(uploaded_documents, uploaded_document_types):
-            PublicationDocument.objects.create(publication=instance, file=document, document_type=doc_type)
 
         return instance
