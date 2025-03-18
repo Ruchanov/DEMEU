@@ -140,6 +140,10 @@ class PublicationSerializer(serializers.ModelSerializer):
         uploaded_documents = validated_data.pop('uploaded_documents', [])
         uploaded_document_types = validated_data.pop('uploaded_document_types', [])
 
+        update_images = validated_data.pop('update_images', 'add')  # 'add' or 'replace'
+        update_videos = validated_data.pop('update_videos', 'add')  # 'add' or 'replace'
+        update_documents = validated_data.pop('update_documents', 'add')  # 'add' or 'replace'
+
         if uploaded_documents and len(uploaded_documents) != len(uploaded_document_types):
             raise serializers.ValidationError("Каждый документ должен иметь соответствующий тип.")
 
@@ -147,19 +151,22 @@ class PublicationSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
 
-        if uploaded_images:
+        # Обновление изображений
+        if update_images == 'replace':
             instance.images.all().delete()
-            for image in uploaded_images:
-                PublicationImage.objects.create(publication=instance, image=image)
+        for image in uploaded_images:
+            PublicationImage.objects.create(publication=instance, image=image)
 
-        if uploaded_videos:
+        # Обновление видео
+        if update_videos == 'replace':
             instance.videos.all().delete()
-            for video in uploaded_videos:
-                PublicationVideo.objects.create(publication=instance, video=video)
+        for video in uploaded_videos:
+            PublicationVideo.objects.create(publication=instance, video=video)
 
-        if uploaded_documents:
+        # Обновление документов
+        if update_documents == 'replace':
             instance.documents.all().delete()
-            for document, doc_type in zip(uploaded_documents, uploaded_document_types):
-                PublicationDocument.objects.create(publication=instance, file=document, document_type=doc_type)
+        for document, doc_type in zip(uploaded_documents, uploaded_document_types):
+            PublicationDocument.objects.create(publication=instance, file=document, document_type=doc_type)
 
         return instance
