@@ -134,3 +134,32 @@ class PublicationSerializer(serializers.ModelSerializer):
 
         return publication
 
+    def update(self, instance, validated_data):
+        uploaded_images = validated_data.pop('uploaded_images', [])
+        uploaded_videos = validated_data.pop('uploaded_videos', [])
+        uploaded_documents = validated_data.pop('uploaded_documents', [])
+        uploaded_document_types = validated_data.pop('uploaded_document_types', [])
+
+        if uploaded_documents and len(uploaded_documents) != len(uploaded_document_types):
+            raise serializers.ValidationError("Каждый документ должен иметь соответствующий тип.")
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if uploaded_images:
+            instance.images.all().delete()
+            for image in uploaded_images:
+                PublicationImage.objects.create(publication=instance, image=image)
+
+        if uploaded_videos:
+            instance.videos.all().delete()
+            for video in uploaded_videos:
+                PublicationVideo.objects.create(publication=instance, video=video)
+
+        if uploaded_documents:
+            instance.documents.all().delete()
+            for document, doc_type in zip(uploaded_documents, uploaded_document_types):
+                PublicationDocument.objects.create(publication=instance, file=document, document_type=doc_type)
+
+        return instance
