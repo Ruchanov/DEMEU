@@ -271,7 +271,11 @@ def top_publications(request):
         category_factor = 1 + (category_averages_dict.get(publication.category, 50000) / 50000) * 0.2
 
         # Коэффициент вовлеченности пользователей (уникальные пользователи в комментариях)
-        active_users = publication.comments.values('author').distinct().count()
+        active_users = (
+            publication.comments.values('author').distinct().count()
+            if hasattr(Publication, 'comments')
+            else 0
+        )
         engagement_boost = 1 + (active_users / 50)
 
         # Финальный расчет рейтинга
@@ -302,14 +306,13 @@ def recommended_publications(request):
         .values_list('publication__category', flat=True)
     )
 
-    # Получаем категории, на которые пользователь жертвовал
     donated_categories = list(
         Donation.objects.filter(donor=user)
         .values('publication__category')
         .annotate(count=Count('id'))
         .order_by('-count')
-        .values_list('publication__category', flat=True)
     )
+    donated_categories = [item['publication__category'] for item in donated_categories]
 
     # Объединяем списки категорий и удаляем дубликаты
     preferred_categories = list(set(viewed_categories + donated_categories))

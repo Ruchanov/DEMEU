@@ -86,7 +86,7 @@ class Publication(models.Model):
         return self.views.count()
 
     def total_comments(self):
-        return self.comments.count()
+        return self.comments.count() if hasattr(self, 'comments') else 0
 
     def donation_percentage(self):
         total = self.total_donated()
