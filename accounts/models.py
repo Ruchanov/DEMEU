@@ -49,6 +49,7 @@ class User(AbstractBaseUser):
     verification_token_expiry = models.DateTimeField(null=True, blank=True)
     failed_attempts = models.PositiveIntegerField(default=0)
     lockout_time = models.DateTimeField(null=True, blank=True)
+    date_joined = models.DateTimeField(default=timezone.now)
 
     objects = UserManager()
 

@@ -131,7 +131,8 @@ class PublicationDocument(models.Model):
 
 class Donation(models.Model):
     publication = models.ForeignKey(Publication, on_delete=models.CASCADE, related_name='donations')
-    donor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    donor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                              related_name="donations")
     donor_amount = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(default=timezone.now)
 

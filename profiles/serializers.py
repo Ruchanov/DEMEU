@@ -1,5 +1,7 @@
 from django.db.models import Sum
 from rest_framework import serializers
+
+from publications.models import Donation
 from .models import Profile
 from accounts.models import User
 from publications.serializers import PublicationSerializer
@@ -38,10 +40,24 @@ class ProfileSerializer(serializers.ModelSerializer):
             return today.year - obj.birth_date.year - ((today.month, today.day) < (obj.birth_date.month, obj.birth_date.day))
         return None
 
+    # def get_latest_donations(self, obj):
+    #     donations = Donation.objects.filter(donor=obj.user).order_by('-created_at')[:5]
+    #     return DonationSerializer(donations, many=True).data
+
     def get_latest_donations(self, obj):
-        donations = obj.user.publications.prefetch_related('donations').values('donations__donor_name',
-                'donations__donor_amount','donations__created_at').order_by('-donations__created_at')[:5]
-        return donations
+        donations = Donation.objects.filter(donor=obj.user).order_by('-created_at')[:5]
+        return [
+            {
+                "donor_name": f"{donation.donor.first_name} {donation.donor.last_name}".strip() if donation.donor else "Anonymous",
+                "donor_amount": donation.donor_amount,
+                "publication_id": donation.publication.id,
+                "publication_title": donation.publication.title,
+                "publication_category": donation.publication.category,
+                "publication_author": f"{donation.publication.author.first_name} {donation.publication.author.last_name}".strip(),
+                "publication_created_at": donation.publication.created_at
+            }
+            for donation in donations
+        ]
 
     def get_total_publications(self, obj):
         return obj.user.publications.count()
