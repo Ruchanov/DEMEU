@@ -296,17 +296,19 @@ def recommended_publications(request):
     # Получаем категории, которые пользователь чаще всего просматривал
     viewed_categories = list(
         View.objects.filter(viewer=user)
-        .values_list('publication__category', flat=True)
+        .values('publication__category')
         .annotate(count=Count('id'))
         .order_by('-count')
+        .values_list('publication__category', flat=True)
     )
 
     # Получаем категории, на которые пользователь жертвовал
     donated_categories = list(
-        Donation.objects.filter(publication__author=user)
-        .values_list('publication__category', flat=True)
+        Donation.objects.filter(donor=user)
+        .values('publication__category')
         .annotate(count=Count('id'))
         .order_by('-count')
+        .values_list('publication__category', flat=True)
     )
 
     # Объединяем списки категорий и удаляем дубликаты

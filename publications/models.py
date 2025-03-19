@@ -136,7 +136,10 @@ class Donation(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return f"{self.donor_name} donated {self.donor_amount}"
+        donor_name = "Anonymous"
+        if self.donor:
+            donor_name = f"{self.donor.first_name} {self.donor.last_name}".strip()
+        return f"{donor_name} donated {self.donor_amount}"
 
 
 class View(models.Model):

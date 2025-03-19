@@ -1,4 +1,4 @@
-from django.db.models import Sum
+from django.db.models import Sum, F
 from rest_framework import serializers
 from .models import Publication, PublicationImage, PublicationVideo, Donation, View, PublicationDocument
 from profiles.models import Profile
@@ -22,7 +22,7 @@ class DonationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Donation
-        fields = ['donor_name', 'donor_amount', 'avatar','created_at']
+        fields = ['donor_name', 'donor_amount', 'avatar', 'created_at']
 
     def get_avatar(self, obj):
         if obj.donor and hasattr(obj.donor, 'profile') and obj.donor.profile.avatar:
@@ -32,9 +32,7 @@ class DonationSerializer(serializers.ModelSerializer):
         return None
 
     def get_donor_name(self, obj):
-        if obj.donor:
-            return f"{obj.donor.first_name} {obj.donor.last_name}".strip()
-        return "Anonymous"
+        return f"{obj.donor.first_name} {obj.donor.last_name}".strip() if obj.donor else "Anonymous"
 
 
 class ViewSerializer(serializers.ModelSerializer):
@@ -73,7 +71,7 @@ class PublicationSerializer(serializers.ModelSerializer):
     )
 
     documents = PublicationDocumentSerializer(many=True, read_only=True)
-    donations = DonationSerializer(many=True, read_only=True)
+    donations = serializers.SerializerMethodField()
     donation_percentage = serializers.SerializerMethodField()
     views = ViewSerializer(many=True, read_only=True)
     total_views = serializers.SerializerMethodField()
@@ -99,6 +97,17 @@ class PublicationSerializer(serializers.ModelSerializer):
 
     def get_author_email(self, obj):
         return obj.author.email if obj.author else None
+
+    def get_donations(self, obj):
+        donations = obj.donations.select_related('donor')
+        return [
+            {
+                "donor_name": f"{donation.donor.first_name} {donation.donor.last_name}".strip()
+                if donation.donor else "Anonymous",
+                "donor_amount": donation.donor_amount
+            }
+            for donation in donations
+        ]
 
     def get_donation_percentage(self, obj):
         total_donations = obj.donations.aggregate(total=Sum('donor_amount'))['total'] or 0
