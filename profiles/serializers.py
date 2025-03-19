@@ -1,6 +1,8 @@
 from django.db.models import Sum
 from rest_framework import serializers
 
+from favorites.models import FavoritePublication
+from favorites.serializers import FavoritePublicationSerializer
 from publications.models import Donation
 from .models import Profile
 from accounts.models import User
@@ -21,6 +23,10 @@ class ProfileSerializer(serializers.ModelSerializer):
     total_profile_views = serializers.SerializerMethodField()
     total_publications = serializers.SerializerMethodField()
     total_donations = serializers.SerializerMethodField()
+    total_favorite_publications = serializers.SerializerMethodField()
+    favorite_publications = serializers.SerializerMethodField()
+    days_since_registration = serializers.SerializerMethodField()
+
 
     class Meta:
         model = Profile
@@ -29,9 +35,10 @@ class ProfileSerializer(serializers.ModelSerializer):
             'country', 'city', 'phone_number', 'bio',
             'instagram', 'whatsapp', 'facebook', 'telegram',
             'birth_date', 'age',
-            'avatar','date_joined', 'publications', 'latest_donations',
+            'avatar','date_joined', 'days_since_registration', 'publications', 'latest_donations',
             'total_profile_views',
-            'total_publications', 'total_donations'
+            'total_publications', 'total_donations',
+            'total_favorite_publications', 'favorite_publications',
         ]
 
     def get_age(self, obj):
@@ -67,6 +74,18 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def get_total_profile_views(self, obj):
         return obj.views.count()
+
+    def get_total_favorite_publications(self, obj):
+        return FavoritePublication.objects.filter(user=obj.user).count()
+
+    def get_favorite_publications(self, obj):
+        favorites = FavoritePublication.objects.filter(user=obj.user)
+        return FavoritePublicationSerializer(favorites, many=True).data
+
+    def get_days_since_registration(self, obj):
+        if hasattr(obj, 'user') and hasattr(obj.user, 'date_joined') and obj.user.date_joined:
+            return (date.today() - obj.user.date_joined.date()).days
+        return None
 
     # def to_representation(self, instance):
     #     data = super().to_representation(instance)
