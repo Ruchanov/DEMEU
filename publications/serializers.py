@@ -77,13 +77,15 @@ class PublicationSerializer(serializers.ModelSerializer):
     total_views = serializers.SerializerMethodField()
     total_donated = serializers.SerializerMethodField()
     total_comments = serializers.SerializerMethodField()
+    author_id = serializers.SerializerMethodField()
     author_name = serializers.SerializerMethodField()
     author_email = serializers.SerializerMethodField()
+    author_avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = Publication
         fields = [
-            'id', 'author_name', 'author_email', 'title', 'category', 'description',
+            'id', 'author_id', 'author_name', 'author_email', 'author_avatar', 'title', 'category', 'description',
             'bank_details', 'amount', 'contact_name', 'contact_email',
             'contact_phone', 'created_at', 'updated_at', 'images',
             'videos', 'uploaded_images', 'uploaded_videos','uploaded_documents','uploaded_document_types',
@@ -91,12 +93,23 @@ class PublicationSerializer(serializers.ModelSerializer):
             'total_views', 'total_donated', 'total_comments']
         read_only_fields = ['id', 'author', 'created_at', 'updated_at']
 
+    def get_author_id(self, obj):
+        return obj.author.id if obj.author else None
+
 
     def get_author_name(self, obj):
         return f"{obj.author.first_name} {obj.author.last_name}" if obj.author else None
 
     def get_author_email(self, obj):
         return obj.author.email if obj.author else None
+
+    def get_author_avatar(self, obj):
+        if obj.author and hasattr(obj.author, 'profile') and obj.author.profile.avatar:
+            request = self.context.get('request')
+            avatar_url = obj.author.profile.avatar.url
+            return request.build_absolute_uri(avatar_url) if request else avatar_url
+        return None
+
 
     def get_donations(self, obj):
         donations = obj.donations.select_related('donor')
