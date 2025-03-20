@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import Donation
 
 class DonationAdmin(admin.ModelAdmin):
-    list_display = ['get_donor_name', 'donor_amount', 'publication', 'created_at']
+    list_display = ['get_donor_name', 'donor_amount', 'support_amount', 'total_amount', 'publication', 'created_at']
     search_fields = ('donor__email', 'publication__title')
     list_filter = ('publication',)
 
