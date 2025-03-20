@@ -1,7 +1,10 @@
-from django.db.models import Sum, F
+from django.db.models import Sum
 from rest_framework import serializers
-from .models import Publication, PublicationImage, PublicationVideo, Donation, View, PublicationDocument
+
+from donations import models
+from .models import Publication, PublicationImage, PublicationVideo, View, PublicationDocument
 from profiles.models import Profile
+from donations.models import Donation
 
 
 class PublicationImageSerializer(serializers.ModelSerializer):
@@ -137,7 +140,7 @@ class PublicationSerializer(serializers.ModelSerializer):
         return obj.views.count()
 
     def get_total_donated(self, obj):
-        return obj.donations.aggregate(total=Sum('donor_amount'))['total'] or 0
+        return Donation.objects.filter(publication=obj).aggregate(total=Sum('donor_amount'))['total'] or 0
 
     def get_total_comments(self, obj):
         return obj.comments.count()

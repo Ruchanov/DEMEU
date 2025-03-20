@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'google_auth',
     'profiles',
     'publications',
+    'donations',
     'comments',
     'favorites',
     'info'

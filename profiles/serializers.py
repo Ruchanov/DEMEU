@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from favorites.models import FavoritePublication
 from favorites.serializers import FavoritePublicationSerializer
-from publications.models import Donation
+from donations.models import Donation
 from .models import Profile
 from accounts.models import User
 from publications.serializers import PublicationSerializer
@@ -54,18 +54,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def get_latest_donations(self, obj):
         donations = Donation.objects.filter(donor=obj.user).order_by('-created_at')[:5]
-        return [
-            {
-                "donor_name": f"{donation.donor.first_name} {donation.donor.last_name}".strip() if donation.donor else "Anonymous",
-                "donor_amount": donation.donor_amount,
-                "publication_id": donation.publication.id,
-                "publication_title": donation.publication.title,
-                "publication_category": donation.publication.category,
-                "publication_author": f"{donation.publication.author.first_name} {donation.publication.author.last_name}".strip(),
-                "publication_created_at": donation.publication.created_at
-            }
-            for donation in donations
-        ]
+        return DonationSerializer(donations, many=True).data
 
     def get_total_publications(self, obj):
         return obj.user.publications.count()

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Publication, PublicationImage, PublicationVideo, Donation, View, PublicationDocument
+from .models import Publication, PublicationImage, PublicationVideo, View, PublicationDocument
 
 
 class PublicationImageInline(admin.TabularInline):
@@ -61,6 +61,5 @@ class PublicationDocumentAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Publication, PublicationAdmin)
-admin.site.register(Donation, DonationAdmin)
 admin.site.register(View, ViewAdmin)
 admin.site.register(PublicationDocument, PublicationDocumentAdmin)
