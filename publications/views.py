@@ -86,7 +86,8 @@ def publication_list(request):
         return Response(serializer.data)
 
     elif request.method == 'POST':
-        serializer = PublicationSerializer(data=request.data)
+        # serializer = PublicationSerializer(data=request.data)
+        serializer = PublicationSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save(author=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)

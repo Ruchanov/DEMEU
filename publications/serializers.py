@@ -71,7 +71,6 @@ class PublicationSerializer(serializers.ModelSerializer):
     )
     deleted_images = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
     deleted_videos = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
-
     delete_all_images = serializers.BooleanField(write_only=True, required=False, default=False)
     delete_all_videos = serializers.BooleanField(write_only=True, required=False, default=False)
 
@@ -144,26 +143,36 @@ class PublicationSerializer(serializers.ModelSerializer):
         return obj.comments.count()
 
     def create(self, validated_data):
-        uploaded_images = validated_data.pop('uploaded_images', [])
-        uploaded_videos = validated_data.pop('uploaded_videos', [])
-        uploaded_documents = validated_data.pop('uploaded_documents', [])
-        uploaded_document_types = validated_data.pop('uploaded_document_types', [])
+        request = self.context.get('request')
+
+        if not request:
+            raise serializers.ValidationError({"error": "Request object is missing in serializer context."})
+
+        uploaded_images = request.FILES.getlist('uploaded_images')
+        uploaded_videos = request.FILES.getlist('uploaded_videos')
+        uploaded_documents = request.FILES.getlist('uploaded_documents')
+        uploaded_document_types = request.data.getlist('uploaded_document_types[]')
+
+        # Оставляем только поля, которые есть в модели Publication
+        model_fields = {field.name for field in Publication._meta.fields}
+        validated_data = {key: value for key, value in validated_data.items() if key in model_fields}
+
+        publication = Publication.objects.create(**validated_data)
+
+        for image in uploaded_images:
+            PublicationImage.objects.create(publication=publication, image=image)
+        print("Images uploaded successfully!" if uploaded_images else "No images uploaded!")
+
+        for video in uploaded_videos:
+            PublicationVideo.objects.create(publication=publication, video=video)
+        print("Videos uploaded successfully!" if uploaded_videos else "No videos uploaded!")
 
         if uploaded_documents and len(uploaded_documents) != len(uploaded_document_types):
             raise serializers.ValidationError("Каждый документ должен иметь соответствующий тип.")
 
-        publication = Publication.objects.create(**validated_data)
-
-        # Save images
-        for image in uploaded_images:
-            PublicationImage.objects.create(publication=publication, image=image)
-
-        # Save videos
-        for video in uploaded_videos:
-            PublicationVideo.objects.create(publication=publication, video=video)
-
         for document, doc_type in zip(uploaded_documents, uploaded_document_types):
             PublicationDocument.objects.create(publication=publication, file=document, document_type=doc_type)
+        print("Documents uploaded successfully!" if uploaded_documents else "No documents uploaded!")
 
         return publication
 
