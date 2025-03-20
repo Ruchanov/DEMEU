@@ -69,6 +69,11 @@ class PublicationSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False
     )
+    deleted_images = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
+    deleted_videos = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
+
+    delete_all_images = serializers.BooleanField(write_only=True, required=False, default=False)
+    delete_all_videos = serializers.BooleanField(write_only=True, required=False, default=False)
 
     documents = PublicationDocumentSerializer(many=True, read_only=True)
     donations = serializers.SerializerMethodField()
@@ -89,6 +94,7 @@ class PublicationSerializer(serializers.ModelSerializer):
             'bank_details', 'amount', 'contact_name', 'contact_email',
             'contact_phone', 'created_at', 'updated_at', 'images',
             'videos', 'uploaded_images', 'uploaded_videos','uploaded_documents','uploaded_document_types',
+            'deleted_images', 'deleted_videos', 'delete_all_images', 'delete_all_videos',
             'documents', 'donations', 'views', 'donation_percentage',
             'total_views', 'total_donated', 'total_comments']
         read_only_fields = ['id', 'author', 'created_at', 'updated_at']
@@ -162,28 +168,46 @@ class PublicationSerializer(serializers.ModelSerializer):
         return publication
 
     def update(self, instance, validated_data):
-        uploaded_images = validated_data.pop('uploaded_images', [])
-        uploaded_videos = validated_data.pop('uploaded_videos', [])
+        # Получаем текущего пользователя
+        request_user = self.context['request'].user
 
-        update_images = validated_data.pop('update_images', 'add')  # 'add' or 'replace'
-        update_videos = validated_data.pop('update_videos', 'add')  # 'add' or 'replace'
+        # Проверяем, является ли пользователь автором публикации
+        if instance.author != request_user:
+            raise serializers.ValidationError({"error": "You do not have permission to edit this publication."})
 
+        # Удаление конкретных изображений
+        deleted_images = validated_data.pop('deleted_images', [])
+        if deleted_images:
+            images_to_delete = PublicationImage.objects.filter(id__in=deleted_images, publication=instance)
+            images_to_delete.delete()
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+        # Удаление конкретных видео
+        deleted_videos = validated_data.pop('deleted_videos', [])
+        if deleted_videos:
+            videos_to_delete = PublicationVideo.objects.filter(id__in=deleted_videos, publication=instance)
+            videos_to_delete.delete()
 
-        instance.save()
-
-        # Обновление изображений
-        if update_images == 'replace' and uploaded_images:  # Удаляем только если есть новые файлы
+        # Полное удаление всех изображений
+        if validated_data.pop('delete_all_images', False):
             instance.images.all().delete()
+
+        # Полное удаление всех видео
+        if validated_data.pop('delete_all_videos', False):
+            instance.videos.all().delete()
+
+        # Добавление новых изображений
+        uploaded_images = validated_data.pop('uploaded_images', [])
         for image in uploaded_images:
             PublicationImage.objects.create(publication=instance, image=image)
 
-        # Обновление видео
-        if update_videos == 'replace' and uploaded_videos:  # Удаляем только если есть новые файлы
-            instance.videos.all().delete()
+        # Добавление новых видео
+        uploaded_videos = validated_data.pop('uploaded_videos', [])
         for video in uploaded_videos:
             PublicationVideo.objects.create(publication=instance, video=video)
+
+        # Обновление остальных полей
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
 
         return instance

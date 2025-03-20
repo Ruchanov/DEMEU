@@ -111,7 +111,8 @@ def publication_detail(request, pk):
         if request.user.is_authenticated and not View.objects.filter(publication=publication, viewer=request.user).exists():
             View.objects.create(publication=publication, viewer=request.user)
 
-        serializer = PublicationSerializer(publication)
+        # serializer = PublicationSerializer(publication)
+        serializer = PublicationSerializer(publication, context={'request': request})
         return Response(serializer.data)
 
     elif request.method == 'PUT':
@@ -119,7 +120,8 @@ def publication_detail(request, pk):
             return Response({"error": "You do not have permission to edit this publication."},
                             status=status.HTTP_403_FORBIDDEN)
 
-        serializer = PublicationSerializer(publication, data=request.data, partial=True)
+        # serializer = PublicationSerializer(publication, data=request.data, partial=True)
+        serializer = PublicationSerializer(publication, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
