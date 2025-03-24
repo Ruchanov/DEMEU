@@ -1,4 +1,5 @@
 import os
+import time
 from io import BytesIO
 from datetime import date
 from PIL import Image
@@ -17,7 +18,7 @@ def validate_image_size(image):
 
 class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
-    avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
+    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True, validators=[validate_image_size])
     country = models.CharField(max_length=100, blank=True, null=True)
     city = models.CharField(max_length=100, blank=True, null=True)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
@@ -29,14 +30,14 @@ class Profile(models.Model):
     telegram = models.URLField(max_length=255, blank=True, null=True)
 
     birth_date = models.DateField(blank=True, null=True)
-    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True, validators=[validate_image_size])
 
     def save(self, *args, **kwargs):
         if self.pk:
             old_avatar = Profile.objects.get(pk=self.pk).avatar
-            if old_avatar and old_avatar != self.avatar and old_avatar.path:
-                if os.path.exists(old_avatar.path):
-                    os.remove(old_avatar.path)
+            if old_avatar and self.avatar and old_avatar.name != self.avatar.name:
+                old_path = old_avatar.path
+                if os.path.exists(old_path):
+                    os.remove(old_path)
 
         if self.avatar:
             self.avatar = self.convert_to_webp(self.avatar)
@@ -55,7 +56,11 @@ class Profile(models.Model):
         buffer = BytesIO()
         img.save(buffer, format="WEBP", quality=85)
 
-        return ContentFile(buffer.getvalue(), name=f"{os.path.splitext(image.name)[0]}.webp")
+        timestamp = int(time.time())
+        base_name = os.path.splitext(image.name)[0]
+        new_name = f"{base_name}_{timestamp}.webp"
+
+        return ContentFile(buffer.getvalue(), name=new_name)
 
     @property
     def age(self):

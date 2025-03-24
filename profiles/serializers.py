@@ -33,7 +33,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = Profile
         fields = [
             'user_id','email', 'first_name', 'last_name',
-            'country', 'city', 'phone_number', 'bio',
+            'avatar', 'country', 'city', 'phone_number', 'bio',
             'instagram', 'whatsapp', 'facebook', 'telegram',
             'birth_date', 'age',
             'avatar','date_joined', 'days_since_registration', 'publications', 'latest_donations',
