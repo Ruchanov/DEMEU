@@ -7,6 +7,7 @@ from .models import Donation
 from .serializers import DonationSerializer
 from publications.models import Publication
 from .utils import send_donation_email
+from .tasks import send_donation_email_task
 
 def get_publication_or_404(publication_id):
     #Возвращает публикацию или None, если не найдено.
@@ -31,8 +32,10 @@ def donation_create(request, publication_id):
     if serializer.is_valid():
         donation = serializer.save(publication=publication, donor=request.user)
 
-        # Отправляем чек на email
-        send_donation_email(request.user, donation)
+        # # Отправляем чек на email
+        # send_donation_email(request.user, donation)
+
+        send_donation_email_task.delay(donation.id)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
