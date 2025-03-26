@@ -21,6 +21,9 @@ from django.conf import settings
 from django_ratelimit.decorators import ratelimit
 from django_ratelimit.exceptions import Ratelimited
 from django.http import JsonResponse
+from .tasks import send_verification_email_task
+from .tasks import send_account_locked_email_task
+
 
 def custom_ratelimit_handler(view):
     def wrapped_view(*args, **kwargs):
@@ -76,7 +79,7 @@ def user_registration(request):
 
         if settings.SIGNUP_EMAIL_CONFIRMATION:
             try:
-                send_verification_email(user)
+                send_verification_email_task.delay(user.id)
             except Exception as e:
                 return Response({"error": f"Failed to send verification email: {str(e)}"},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -187,13 +190,8 @@ def login_user(request):
         user.failed_attempts += 1
         if user.failed_attempts >= 5:
             user.lockout_time = timezone.now() + timedelta(minutes=15)
-            send_mail(
-                'Account Locked',
-                'Your account has been locked due to too many failed login attempts.',
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
-                fail_silently=False,
-            )
+            send_account_locked_email_task.delay(user.email)
+
         user.save()
         return Response({"error": "Invalid password."}, status=status.HTTP_401_UNAUTHORIZED)
 
