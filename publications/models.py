@@ -116,15 +116,27 @@ DOCUMENT_TYPES = [
 
 # Модель документа
 class PublicationDocument(models.Model):
-    publication = models.ForeignKey(
-        'Publication', on_delete=models.CASCADE, related_name='documents'
-    )
+    publication = models.ForeignKey('Publication', on_delete=models.CASCADE, related_name='documents')
     document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPES)
     file = models.FileField(
         upload_to=publication_document_path,
-        validators=[validate_document_format, validate_file_size]
+        validators=[validate_document_format, validate_file_size]  # <-- здесь исправили
     )
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    text_hash = models.CharField(max_length=64, unique=False, null=True, blank=True)
+    # Поля проверки ИИ
+    verified = models.BooleanField(default=False)
+    verification_status = models.CharField(
+        max_length=50,
+        choices=[
+            ('pending', 'Ожидание проверки'),
+            ('approved', 'Подтверждён'),
+            ('rejected', 'Отклонён')
+        ],
+        default='pending'
+    )
+    verification_details = models.JSONField(null=True, blank=True)
+    extracted_data = models.JSONField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.publication.title} - {self.get_document_type_display()}"

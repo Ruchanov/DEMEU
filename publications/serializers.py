@@ -5,6 +5,7 @@ from donations import models
 from .models import Publication, PublicationImage, PublicationVideo, View, PublicationDocument
 from profiles.models import Profile
 from donations.models import Donation
+from publications.tasks import validate_document_ocr
 
 
 class PublicationImageSerializer(serializers.ModelSerializer):
@@ -174,8 +175,9 @@ class PublicationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Каждый документ должен иметь соответствующий тип.")
 
         for document, doc_type in zip(uploaded_documents, uploaded_document_types):
-            PublicationDocument.objects.create(publication=publication, file=document, document_type=doc_type)
-        print("Documents uploaded successfully!" if uploaded_documents else "No documents uploaded!")
+            publication_document = PublicationDocument.objects.create(
+                publication=publication,file=document,document_type=doc_type)
+            validate_document_ocr.delay(publication_document.id)
 
         return publication
 

@@ -13,6 +13,7 @@ from rest_framework import status
 from .models import Publication, View, PublicationDocument
 from donations.models import Donation
 from .serializers import PublicationSerializer, DonationSerializer, PublicationDocumentSerializer
+from .tasks import validate_document_ocr
 
 
 def normalize_text(text):
@@ -144,13 +145,17 @@ def upload_document(request, publication_id):
     try:
         publication = Publication.objects.get(id=publication_id)
     except Publication.DoesNotExist:
-        return Response({"error": "Publication not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "Publication not found."}, status=404)
 
     serializer = PublicationDocumentSerializer(data=request.data)
     if serializer.is_valid():
-        serializer.save(publication=publication)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        document = serializer.save(publication=publication)
+
+        # Отправка задачи в Celery:
+        validate_document_ocr.delay(document.id)
+
+        return Response(serializer.data, status=201)
+    return Response(serializer.errors, status=400)
 
 
 @api_view(['GET'])
