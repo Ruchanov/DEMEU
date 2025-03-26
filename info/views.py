@@ -5,6 +5,7 @@ from rest_framework import generics, permissions
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import Feedback
 from .serializers import FeedbackSerializer
+from .tasks import send_admin_notification_task
 
 
 class FeedbackCreateView(generics.CreateAPIView):
@@ -22,7 +23,8 @@ class FeedbackCreateView(generics.CreateAPIView):
             email=user.email
         )
 
-        self.send_admin_notification(feedback)
+        # self.send_admin_notification(feedback)
+        send_admin_notification_task.delay(feedback.id)
 
     def send_admin_notification(self, feedback):
         subject = "New Feedback Submission"
