@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from phonenumber_field.modelfields import PhoneNumberField
+from datetime import timedelta
 
 
 def validate_file_size(file):
@@ -48,6 +49,17 @@ def limit_publication_documents(instance):
         raise ValidationError("Нельзя загружать более 5 документов на одну публикацию.")
 
 
+STATUS_CHOICES = [
+    ('active', 'Активна'),
+    ('successful', 'Успешно завершена'),
+    ('expired', 'Истёк срок'),
+]
+
+DURATION_CHOICES = [
+    (7, "7 дней"),
+    (14, "2 недели"),
+    (30, "1 месяц"),
+]
 
 # Models
 class Publication(models.Model):
@@ -78,6 +90,10 @@ class Publication(models.Model):
     contact_phone = PhoneNumberField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active') #екущий статус публикации
+    is_archived = models.BooleanField(default=False) #для фильтрации в архиве
+    duration_days = models.IntegerField(choices=DURATION_CHOICES, default=30) #длительность публикации (7, 14, 30 дней)
+    expires_at = models.DateTimeField(blank=True, null=True) #дата окончания
 
     def total_donated(self):
         return self.donations.aggregate(total=Sum('donor_amount'))['total'] or 0
@@ -91,6 +107,11 @@ class Publication(models.Model):
     def donation_percentage(self):
         total = self.total_donated()
         return (total / self.amount) * 100 if self.amount else 0
+
+    def save(self, *args, **kwargs):
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(days=self.duration_days)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title

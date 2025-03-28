@@ -1,6 +1,7 @@
 from django.db.models import Sum
+from django.utils import timezone
 from rest_framework import serializers
-
+from datetime import date
 from donations import models
 from .models import Publication, PublicationImage, PublicationVideo, View, PublicationDocument
 from profiles.models import Profile
@@ -90,6 +91,8 @@ class PublicationSerializer(serializers.ModelSerializer):
     author_email = serializers.SerializerMethodField()
     author_avatar = serializers.SerializerMethodField()
 
+    days_remaining = serializers.SerializerMethodField()
+
     class Meta:
         model = Publication
         fields = [
@@ -99,7 +102,7 @@ class PublicationSerializer(serializers.ModelSerializer):
             'videos', 'uploaded_images', 'uploaded_videos','uploaded_documents','uploaded_document_types',
             'deleted_images', 'deleted_videos', 'delete_all_images', 'delete_all_videos',
             'documents', 'donations', 'views', 'donation_percentage',
-            'total_views', 'total_donated', 'total_comments']
+            'total_views', 'total_donated', 'total_comments','duration_days','days_remaining',]
         read_only_fields = ['id', 'author', 'created_at', 'updated_at']
 
     def get_author_id(self, obj):
@@ -145,6 +148,18 @@ class PublicationSerializer(serializers.ModelSerializer):
 
     def get_total_comments(self, obj):
         return obj.comments.count()
+
+    def get_days_remaining(self, obj):
+        if obj.expires_at:
+            today = timezone.now().date()
+            days = (obj.expires_at.date() - today).days
+            return max(0, days)
+        return None
+
+    def validate_duration_days(self, value):
+        if value not in [7, 14, 30]:
+            raise serializers.ValidationError("Период публикации должен быть 7, 14 или 30 дней.")
+        return value
 
     def create(self, validated_data):
         request = self.context.get('request')

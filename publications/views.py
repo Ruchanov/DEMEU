@@ -341,3 +341,24 @@ def recommended_publications(request):
 
     serializer = PublicationSerializer(recommended_posts, many=True)
     return Response(serializer.data)
+
+
+@api_view(['GET'])
+def archived_publications(request):
+    queryset = Publication.objects.filter(is_archived=True).order_by('-created_at')
+    serializer = PublicationSerializer(queryset, many=True, context={'request': request})
+    return Response(serializer.data)
+
+@api_view(['GET'])
+def urgent_publications(request):
+    today = timezone.now()
+    soon = today + timezone.timedelta(days=2)
+
+    queryset = Publication.objects.filter(
+        status='active',
+        expires_at__lte=soon,
+        is_archived=False
+    ).order_by('expires_at')
+
+    serializer = PublicationSerializer(queryset, many=True, context={'request': request})
+    return Response(serializer.data)

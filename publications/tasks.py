@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 import hashlib
 from .utils import send_email_dynamic
-
+from django.utils import timezone
 # Natasha imports
 from natasha import (
     Segmenter,
@@ -156,3 +156,23 @@ def validate_document_ocr(document_id):
             <p>Пожалуйста, попробуйте загрузить документ снова.</p>
         """
         send_email_dynamic(subject, message, user_email)
+
+
+@shared_task
+def check_publication_status():
+    from .models import Publication
+    now = timezone.now()
+    publications = Publication.objects.filter(status='active')
+
+    for pub in publications:
+        donated = pub.total_donated()
+        if donated >= pub.amount:
+            pub.status = 'successful'
+            pub.is_archived = True
+            pub.save()
+            print(f"[✓] {pub.title} marked as successful.")
+        elif pub.expires_at and pub.expires_at <= now:
+            pub.status = 'expired'
+            pub.is_archived = True
+            pub.save()
+            print(f"[⌛] {pub.title} expired and archived.")

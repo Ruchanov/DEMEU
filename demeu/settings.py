@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
+from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -47,6 +48,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     'corsheaders',
+    'django_celery_beat',
 
     'accounts',
     'google_auth',
@@ -174,6 +176,13 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50 MB
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+CELERY_BEAT_SCHEDULE = {
+    'check-publication-status-daily': {
+        'task': 'publications.tasks.check_publication_status',
+        'schedule': crontab(hour=0, minute=0),  # каждый день в полночь
+    },
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
