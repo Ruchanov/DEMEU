@@ -160,10 +160,13 @@ def validate_document_ocr(document_id):
 
 @shared_task
 def check_publication_status():
-    from .models import Publication
-    now = timezone.now()
-    publications = Publication.objects.filter(status='active')
+    print("🕒 Циклическая задача запущена: проверка публикаций")
 
+    from .models import Publication
+    from django.utils import timezone
+    now = timezone.now()
+
+    publications = Publication.objects.filter(status='active')
     for pub in publications:
         donated = pub.total_donated()
         if donated >= pub.amount:
@@ -176,3 +179,4 @@ def check_publication_status():
             pub.is_archived = True
             pub.save()
             print(f"[⌛] {pub.title} expired and archived.")
+

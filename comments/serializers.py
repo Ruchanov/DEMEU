@@ -6,11 +6,12 @@ from profiles.models import Profile
 
 class CommentSerializer(serializers.ModelSerializer):
     author = serializers.StringRelatedField(read_only=True)
+    author_id = serializers.SerializerMethodField()
     avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
-        fields = ['id', 'author','avatar', 'content', 'created_at', 'updated_at']
+        fields = ['id', 'author','author_id','avatar', 'content', 'created_at', 'updated_at']
         read_only_fields = ['id', 'author', 'publication', 'created_at', 'updated_at']
 
     def create(self, validated_data):
@@ -26,3 +27,6 @@ class CommentSerializer(serializers.ModelSerializer):
             avatar_url = obj.author.profile.avatar.url
             return request.build_absolute_uri(avatar_url) if request else avatar_url
         return None
+
+    def get_author_id(self, obj):
+        return obj.author.id if obj.author else None

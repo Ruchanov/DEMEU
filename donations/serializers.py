@@ -3,12 +3,13 @@ from .models import Donation
 
 class DonationSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
+    donor_id = serializers.SerializerMethodField()
     donor_name = serializers.SerializerMethodField()
     donor_avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = Donation
-        fields = ['id','donor_name', 'donor_avatar','donor_amount',
+        fields = ['id','donor_id','donor_name', 'donor_avatar','donor_amount',
                   'support_percentage', 'support_amount', 'total_amount', 'created_at']
 
     def get_donor_name(self, obj):
@@ -22,3 +23,6 @@ class DonationSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(avatar_url)
             return avatar_url
         return None
+
+    def get_donor_id(self, obj):
+        return obj.donor.id if obj.donor else None
