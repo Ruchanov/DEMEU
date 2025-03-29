@@ -58,6 +58,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             {
                 "donor_name": f"{donation.donor.first_name} {donation.donor.last_name}".strip() if donation.donor else "Anonymous",
                 "donor_amount": donation.donor_amount,
+                "donation_created_at": donation.created_at,
                 "publication_id": donation.publication.id,
                 "publication_title": donation.publication.title,
                 "publication_category": donation.publication.category.name if hasattr(donation.publication.category,
