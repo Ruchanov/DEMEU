@@ -13,7 +13,7 @@ from rest_framework import status
 from .models import Publication, View, PublicationDocument
 from donations.models import Donation
 from .serializers import PublicationSerializer, DonationSerializer, PublicationDocumentSerializer
-from .tasks import validate_document_ocr
+from verification.tasks import process_document_verification
 
 
 def normalize_text(text):
@@ -152,7 +152,7 @@ def upload_document(request, publication_id):
         document = serializer.save(publication=publication)
 
         # Отправка задачи в Celery:
-        validate_document_ocr.delay(document.id)
+        process_document_verification.delay(document.id)
 
         return Response(serializer.data, status=201)
     return Response(serializer.errors, status=400)

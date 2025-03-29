@@ -57,7 +57,8 @@ INSTALLED_APPS = [
     'donations',
     'comments',
     'favorites',
-    'info'
+    'info',
+    'verification',
 ]
 
 MIDDLEWARE = [

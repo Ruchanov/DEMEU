@@ -6,7 +6,7 @@ from donations import models
 from .models import Publication, PublicationImage, PublicationVideo, View, PublicationDocument
 from profiles.models import Profile
 from donations.models import Donation
-from publications.tasks import validate_document_ocr
+from verification.tasks import process_document_verification
 
 
 class PublicationImageSerializer(serializers.ModelSerializer):
@@ -192,7 +192,7 @@ class PublicationSerializer(serializers.ModelSerializer):
         for document, doc_type in zip(uploaded_documents, uploaded_document_types):
             publication_document = PublicationDocument.objects.create(
                 publication=publication,file=document,document_type=doc_type)
-            validate_document_ocr.delay(publication_document.id)
+            process_document_verification.delay(publication_document.id)
 
         return publication
 

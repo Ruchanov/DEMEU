@@ -55,9 +55,16 @@ class ViewAdmin(admin.ModelAdmin):
 
 
 class PublicationDocumentAdmin(admin.ModelAdmin):
-    list_display = ('publication', 'document_type', 'file', 'uploaded_at')
+    list_display = (
+        'publication', 'document_type', 'file', 'uploaded_at',
+        'verified', 'verification_status',
+    )
+    readonly_fields = (
+        'uploaded_at', 'verified', 'verification_status',
+        'verification_details', 'extracted_data'
+    )
     search_fields = ('publication__title', 'document_type')
-    list_filter = ('document_type', 'uploaded_at')
+    list_filter = ('document_type', 'uploaded_at', 'verification_status')
 
 
 admin.site.register(Publication, PublicationAdmin)
