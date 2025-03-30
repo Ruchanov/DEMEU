@@ -108,6 +108,9 @@ def publication_detail(request, pk):
     except Publication.DoesNotExist:
         return Response({"error": "Publication not found."}, status=status.HTTP_404_NOT_FOUND)
 
+    if publication.status == 'pending' and request.user != publication.author:
+        return Response({"error": "This publication is not available."}, status=status.HTTP_403_FORBIDDEN)
+
     publication.donation_percentage = (publication.total_donated or 0) / (publication.amount or 1) * 100
 
     if request.method == 'GET':
@@ -196,51 +199,31 @@ def update_document(request, document_id):
     except PublicationDocument.DoesNotExist:
         return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    print(f"Автор публикации: {document.publication.author}")
-    print(f"Пользователь, который делает запрос: {request.user}")
-
     if request.user != document.publication.author:
         return Response({"error": "You don't have permission to update this document."},
                         status=status.HTTP_403_FORBIDDEN)
 
     serializer = PublicationDocumentSerializer(document, data=request.data, partial=True)
     if serializer.is_valid():
-        document.file.delete()  # Удаляем старый файл перед заменой
+        # Удаляем старый файл
+        if document.file:
+            document.file.delete(save=False)
+
+        # Сброс верификационного статуса
+        document.verified = False
+        document.verification_status = 'pending'
+        document.verification_details = None
+        document.extracted_data = None
+
         serializer.save()
+
+        # Повторно отправляем верификацию в Celery
+        from verification.tasks import process_document_verification
+        process_document_verification.delay(document.id)
+
         return Response(serializer.data)
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-# def donation_create(request, publication_id):
-#     try:
-#         publication = Publication.objects.get(id=publication_id)
-#     except Publication.DoesNotExist:
-#         return Response({"error": "Publication not found."}, status=status.HTTP_404_NOT_FOUND)
-#
-#     data = request.data.copy()
-#     data['donor'] = request.user.id
-#
-#     serializer = DonationSerializer(data=data, context={'request': request})
-#     if serializer.is_valid():
-#         serializer.save(publication=publication, donor=request.user)
-#         return Response(serializer.data, status=status.HTTP_201_CREATED)
-#
-#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#
-#
-# @api_view(['GET'])
-# def top_donors(request, publication_id):
-#     try:
-#         publication = Publication.objects.get(id=publication_id)
-#     except Publication.DoesNotExist:
-#         return Response({"error": "Publication not found."}, status=status.HTTP_404_NOT_FOUND)
-#
-#     top_donors = publication.donations.order_by('-donor_amount', '-created_at')[:5]
-#     serializer = DonationSerializer(top_donors, many=True, context={'request': request})
-#     return Response(serializer.data)
-
 
 
 @api_view(['GET'])
@@ -379,6 +362,19 @@ def active_publications(request):
         total_donated=Sum('donations__donor_amount')
     ).filter(
         Q(total_donated__lt=F('amount')) | Q(total_donated__isnull=True)
+    ).order_by('-created_at')
+
+    serializer = PublicationSerializer(queryset, many=True, context={'request': request})
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def pending_publications(request):
+    user = request.user
+    queryset = Publication.objects.filter(
+        author=user,
+        status='pending',
+        verification_status__in=['pending', 'rejected']
     ).order_by('-created_at')
 
     serializer = PublicationSerializer(queryset, many=True, context={'request': request})

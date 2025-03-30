@@ -45,19 +45,39 @@ class ViewSerializer(serializers.ModelSerializer):
         model = View
         fields = ['viewer', 'viewed_at']
 
+
 class PublicationDocumentSerializer(serializers.ModelSerializer):
     preview = serializers.SerializerMethodField()
+    is_pdf = serializers.SerializerMethodField()
 
     class Meta:
         model = PublicationDocument
-        fields = ['id', 'document_type', 'file', 'preview', 'uploaded_at']
-        read_only_fields = ['id', 'uploaded_at']
+        fields = [
+            'id', 'document_type', 'file', 'preview', 'is_pdf',
+            'uploaded_at', 'verified', 'verification_status',
+            'verification_details', 'extracted_data'
+        ]
+        read_only_fields = [
+            'id', 'uploaded_at', 'verified', 'verification_status',
+            'verification_details', 'extracted_data', 'is_pdf'
+        ]
 
     def get_preview(self, obj):
-        if obj.file and obj.file.url.endswith(('jpg', 'jpeg', 'png')):
-            request = self.context.get('request')
-            return request.build_absolute_uri(obj.file.url) if request else obj.file.url
+        if not obj.file:
+            return None
+
+        request = self.context.get('request')
+        url = obj.file.url
+        full_url = request.build_absolute_uri(url) if request else url
+
+        # Возвращаем preview для изображений и PDF
+        if url.lower().endswith(('jpg', 'jpeg', 'png', 'pdf')):
+            return full_url
+
         return None
+
+    def get_is_pdf(self, obj):
+        return obj.file and obj.file.url.lower().endswith('.pdf')
 
 
 
@@ -92,7 +112,7 @@ class PublicationSerializer(serializers.ModelSerializer):
     author_avatar = serializers.SerializerMethodField()
 
     days_remaining = serializers.SerializerMethodField()
-
+    verification_status = serializers.CharField(read_only=True)
     class Meta:
         model = Publication
         fields = [
@@ -102,7 +122,8 @@ class PublicationSerializer(serializers.ModelSerializer):
             'videos', 'uploaded_images', 'uploaded_videos','uploaded_documents','uploaded_document_types',
             'deleted_images', 'deleted_videos', 'delete_all_images', 'delete_all_videos',
             'documents', 'donations', 'views', 'donation_percentage',
-            'total_views', 'total_donated', 'total_comments','duration_days','days_remaining',]
+            'total_views', 'total_donated', 'total_comments','duration_days',
+            'days_remaining','status', 'verification_status',]
         read_only_fields = ['id', 'author', 'created_at', 'updated_at']
 
     def get_author_id(self, obj):
@@ -175,6 +196,9 @@ class PublicationSerializer(serializers.ModelSerializer):
         # Оставляем только поля, которые есть в модели Publication
         model_fields = {field.name for field in Publication._meta.fields}
         validated_data = {key: value for key, value in validated_data.items() if key in model_fields}
+
+        validated_data['status'] = 'pending'
+        validated_data['verification_status'] = 'pending'
 
         publication = Publication.objects.create(**validated_data)
 

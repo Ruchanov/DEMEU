@@ -1,5 +1,3 @@
-# verification/tasks.py
-
 from celery import shared_task
 import os
 import hashlib
@@ -114,6 +112,21 @@ def process_document_verification(document_id):
 
         document.save()
         send_email_dynamic(subject, message, document.publication.author.email)
+
+        publication = document.publication
+        documents = publication.documents.all()
+
+        if any(doc.verification_status == 'rejected' for doc in documents):
+            publication.verification_status = 'rejected'
+            publication.status = 'pending'
+        elif all(doc.verification_status == 'approved' for doc in documents):
+            publication.verification_status = 'approved'
+            publication.status = 'active'
+        else:
+            publication.verification_status = 'pending'
+            publication.status = 'pending'
+
+        publication.save()
 
     except Exception as e:
         document.verified = False

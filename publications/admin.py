@@ -20,9 +20,9 @@ class PublicationDocumentInline(admin.TabularInline):
 
 
 class PublicationAdmin(admin.ModelAdmin):
-    list_display = ('title', 'author', 'category', 'amount', 'created_at')
+    list_display = ('title', 'author', 'category', 'amount', 'status', 'verification_status', 'created_at')
     search_fields = ('title', 'author__email', 'category')
-    list_filter = ('category', 'created_at')
+    list_filter = ('category', 'created_at', 'status', 'verification_status')
     ordering = ('-created_at',)
     readonly_fields = ('created_at', 'updated_at')
     inlines = [PublicationImageInline, PublicationVideoInline, PublicationDocumentInline]
@@ -31,6 +31,7 @@ class PublicationAdmin(admin.ModelAdmin):
         ('Основная информация', {'fields': ('author', 'title', 'category', 'description')}),
         ('Финансовая информация', {'fields': ('bank_details', 'amount')}),
         ('Контактные данные', {'fields': ('contact_name', 'contact_email', 'contact_phone')}),
+        ('Статусы', {'fields': ('status', 'verification_status')}),
         ('Даты', {'fields': ('created_at', 'updated_at')}),
     )
 
@@ -66,6 +67,10 @@ class PublicationDocumentAdmin(admin.ModelAdmin):
     search_fields = ('publication__title', 'document_type')
     list_filter = ('document_type', 'uploaded_at', 'verification_status')
 
+    def verification_summary(self, obj):
+        if obj.verification_details:
+            return str(obj.verification_details.get("message", ""))
+        return ""
 
 admin.site.register(Publication, PublicationAdmin)
 admin.site.register(View, ViewAdmin)

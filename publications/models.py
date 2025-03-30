@@ -49,6 +49,12 @@ def limit_publication_documents(instance):
         raise ValidationError("Нельзя загружать более 5 документов на одну публикацию.")
 
 
+VERIFICATION_STATUS_CHOICES = [
+    ('pending', 'Ожидает проверки'),
+    ('approved', 'Подтверждена'),
+    ('rejected', 'Отклонена'),
+]
+
 STATUS_CHOICES = [
     ('active', 'Активна'),
     ('successful', 'Успешно завершена'),
@@ -94,6 +100,8 @@ class Publication(models.Model):
     is_archived = models.BooleanField(default=False) #для фильтрации в архиве
     duration_days = models.IntegerField(choices=DURATION_CHOICES, default=30) #длительность публикации (7, 14, 30 дней)
     expires_at = models.DateTimeField(blank=True, null=True) #дата окончания
+    verification_status = models.CharField(max_length=20,choices=VERIFICATION_STATUS_CHOICES,default='pending',
+        help_text="Статус проверки всех загруженных документов")
 
     def total_donated(self):
         return self.donations.aggregate(total=Sum('donor_amount'))['total'] or 0
