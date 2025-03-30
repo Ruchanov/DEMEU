@@ -362,3 +362,24 @@ def urgent_publications(request):
 
     serializer = PublicationSerializer(queryset, many=True, context={'request': request})
     return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def active_publications(request):
+    user = request.user
+    today = timezone.now()
+
+    queryset = Publication.objects.filter(
+        author=user,
+        status='active',
+        is_archived=False,
+        expires_at__gt=today  # ещё не истёк срок
+    ).annotate(
+        total_donated=Sum('donations__donor_amount')
+    ).filter(
+        Q(total_donated__lt=F('amount')) | Q(total_donated__isnull=True)
+    ).order_by('-created_at')
+
+    serializer = PublicationSerializer(queryset, many=True, context={'request': request})
+    return Response(serializer.data)
