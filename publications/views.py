@@ -1,8 +1,6 @@
 import os
 import re
 
-from django.db.models.signals import pre_delete
-from django.dispatch import receiver
 from django.utils import timezone
 from decimal import Decimal
 from django.db.models import Sum, Count, Q, F, FloatField, Avg
@@ -10,10 +8,10 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Publication, View, PublicationDocument
+from .models import Publication, View
 from donations.models import Donation
-from .serializers import PublicationSerializer, DonationSerializer, PublicationDocumentSerializer
-from verification.tasks import process_document_verification
+from .serializers import PublicationSerializer
+
 
 
 def normalize_text(text):
@@ -54,7 +52,11 @@ def publication_list(request):
                     Q(author__email__icontains=normalized_search)
                 )
 
-        #Фильтрация
+        #Фильтрация по статусу(по умолчанию показываем только активные)
+        status_param = request.GET.get('status', 'active')
+        publications = publications.filter(status=status_param)
+
+        # Фильтрация по категории
         categories = request.GET.get('category')
         if categories:
             category_list = [c.strip() for c in categories.split(',')]  # Разбиваем строку на список
@@ -142,95 +144,11 @@ def publication_detail(request, pk):
         return Response({"message": "Publication deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def upload_document(request, publication_id):
-    try:
-        publication = Publication.objects.get(id=publication_id)
-    except Publication.DoesNotExist:
-        return Response({"error": "Publication not found."}, status=404)
-
-    serializer = PublicationDocumentSerializer(data=request.data)
-    if serializer.is_valid():
-        document = serializer.save(publication=publication)
-
-        # Отправка задачи в Celery:
-        process_document_verification.delay(document.id)
-
-        return Response(serializer.data, status=201)
-    return Response(serializer.errors, status=400)
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def list_documents(request, publication_id):
-    documents = PublicationDocument.objects.filter(publication_id=publication_id)
-    serializer = PublicationDocumentSerializer(documents, many=True)
-    return Response(serializer.data)
-
-
-@api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
-def delete_document(request, document_id):
-    try:
-        document = PublicationDocument.objects.get(id=document_id)
-    except PublicationDocument.DoesNotExist:
-        return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
-
-    if request.user != document.publication.author:
-        return Response({"error": "You don't have permission to delete this document."}, status=status.HTTP_403_FORBIDDEN)
-
-    document.delete()
-    return Response({"message": "Document deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
-
-
-@receiver(pre_delete, sender=PublicationDocument)
-def delete_document_file(sender, instance, **kwargs):
-    if instance.file:
-        if os.path.exists(instance.file.path):
-            os.remove(instance.file.path)
-
-
-@api_view(['PUT'])
-@permission_classes([IsAuthenticated])
-def update_document(request, document_id):
-    try:
-        document = PublicationDocument.objects.get(id=document_id)
-    except PublicationDocument.DoesNotExist:
-        return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
-
-    if request.user != document.publication.author:
-        return Response({"error": "You don't have permission to update this document."},
-                        status=status.HTTP_403_FORBIDDEN)
-
-    serializer = PublicationDocumentSerializer(document, data=request.data, partial=True)
-    if serializer.is_valid():
-        # Удаляем старый файл
-        if document.file:
-            document.file.delete(save=False)
-
-        # Сброс верификационного статуса
-        document.verified = False
-        document.verification_status = 'pending'
-        document.verification_details = None
-        document.extracted_data = None
-
-        serializer.save()
-
-        # Повторно отправляем верификацию в Celery
-        from verification.tasks import process_document_verification
-        process_document_verification.delay(document.id)
-
-        return Response(serializer.data)
-
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 @api_view(['GET'])
 def top_publications(request):
     two_months_ago = timezone.now() - timezone.timedelta(days=60)
 
-    publications = Publication.objects.filter(created_at__gte=two_months_ago)
+    publications = Publication.objects.filter(created_at__gte=two_months_ago, status='active')
 
     publications = publications.annotate(
         total_donated=Sum('donations__donor_amount', default=0),
@@ -310,17 +228,15 @@ def recommended_publications(request):
     preferred_categories = list(set(viewed_categories + donated_categories))
 
     # Получаем публикации из предпочтительных категорий
-    recommended_posts = Publication.objects.filter(category__in=preferred_categories).exclude(author=user)
+    recommended_posts = Publication.objects.filter(category__in=preferred_categories, status='active').exclude(author=user)
 
     # Если у пользователя нет истории, просто берем самые популярные посты
     if not recommended_posts.exists():
         recommended_posts = (
             Publication.objects.annotate(
                 total_donations=Sum('donations__donor_amount'),
-                total_views=Count('views')
-            )
-            .order_by('-total_donations', '-total_views')[:5]
-        )
+                total_views=Count('views'))
+            .filter(status='active').order_by('-total_donations', '-total_views')[:5])
 
     serializer = PublicationSerializer(recommended_posts, many=True)
     return Response(serializer.data)

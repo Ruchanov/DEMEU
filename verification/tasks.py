@@ -43,13 +43,23 @@ def preprocess_image(file_path):
 
 @shared_task
 def process_document_verification(document_id):
-    document = PublicationDocument.objects.get(id=document_id)
+    try:
+        document = PublicationDocument.objects.get(id=document_id)
+    except PublicationDocument.DoesNotExist:
+        return  # Документ уже удалён — задача безопасно завершена
+
     file_path = os.path.join(settings.MEDIA_ROOT, document.file.name)
 
     try:
         processed_path = preprocess_image(file_path)
         text = extract_text_from_file(processed_path)
         os.remove(processed_path)
+        if not text.strip():
+            document.verified = False
+            document.verification_status = 'rejected'
+            document.verification_details = {'error': 'Не удалось распознать текст документа.'}
+            document.save()
+            return
 
         text_hash = hashlib.sha256(text.encode('utf-8')).hexdigest()
         document.text_hash = text_hash
@@ -111,7 +121,7 @@ def process_document_verification(document_id):
             """
 
         document.save()
-        send_email_dynamic(subject, message, document.publication.author.email)
+
 
         publication = document.publication
         documents = publication.documents.all()
@@ -133,13 +143,6 @@ def process_document_verification(document_id):
         document.verification_status = 'rejected'
         document.verification_details = {'error': str(e)}
         document.save()
-
-        subject = f'⚠️ Ошибка при проверке документа "{document.get_document_type_display()}"'
-        message = f"""
-            <p>Произошла ошибка при верификации документа:</p>
-            <pre>{str(e)}</pre>
-        """
-        send_email_dynamic(subject, message, document.publication.author.email)
 
 
 @shared_task

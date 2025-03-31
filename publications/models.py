@@ -58,6 +58,7 @@ VERIFICATION_STATUS_CHOICES = [
 STATUS_CHOICES = [
     ('active', 'Активна'),
     ('successful', 'Успешно завершена'),
+    ('pending', 'Ожидает проверки'),
     ('expired', 'Истёк срок'),
 ]
 

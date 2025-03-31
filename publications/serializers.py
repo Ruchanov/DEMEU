@@ -191,13 +191,22 @@ class PublicationSerializer(serializers.ModelSerializer):
         uploaded_images = request.FILES.getlist('uploaded_images')
         uploaded_videos = request.FILES.getlist('uploaded_videos')
         uploaded_documents = request.FILES.getlist('uploaded_documents')
-        uploaded_document_types = request.data.getlist('uploaded_document_types[]')
+        uploaded_document_types = (
+                request.data.getlist('uploaded_document_types[]') or
+                request.data.getlist('uploaded_document_types') or [])
+
+        #Проверка: обязательно хотя бы один документ
+        if not uploaded_documents:
+            raise serializers.ValidationError({"uploaded_documents": "Необходимо загрузить хотя бы один документ."})
+
+        # Проверка соответствия количества документов и типов
+        if uploaded_documents and len(uploaded_documents) != len(uploaded_document_types):
+            raise serializers.ValidationError("Каждый документ должен иметь соответствующий тип.")
 
         # Оставляем только поля, которые есть в модели Publication
         model_fields = {field.name for field in Publication._meta.fields}
         validated_data = {key: value for key, value in validated_data.items() if key in model_fields}
 
-        validated_data['status'] = 'pending'
         validated_data['verification_status'] = 'pending'
 
         publication = Publication.objects.create(**validated_data)
