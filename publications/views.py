@@ -54,7 +54,12 @@ def publication_list(request):
 
         #Фильтрация по статусу(по умолчанию показываем только активные)
         status_param = request.GET.get('status', 'active')
-        publications = publications.filter(status=status_param)
+        if status_param in ['expired', 'successful', 'pending']:
+            if not request.user.is_authenticated:
+                return Response({"error": "Access denied."}, status=status.HTTP_403_FORBIDDEN)
+            publications = publications.filter(author=request.user, status=status_param)
+        else:
+            publications = publications.filter(status=status_param)
 
         # Фильтрация по категории
         categories = request.GET.get('category')
@@ -110,7 +115,7 @@ def publication_detail(request, pk):
     except Publication.DoesNotExist:
         return Response({"error": "Publication not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    if publication.status == 'pending' and request.user != publication.author:
+    if publication.status in ['pending', 'expired', 'successful'] and request.user != publication.author:
         return Response({"error": "This publication is not available."}, status=status.HTTP_403_FORBIDDEN)
 
     publication.donation_percentage = (publication.total_donated or 0) / (publication.amount or 1) * 100
@@ -243,8 +248,10 @@ def recommended_publications(request):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def archived_publications(request):
-    queryset = Publication.objects.filter(is_archived=True).order_by('-created_at')
+    user = request.user
+    queryset = Publication.objects.filter(author=user, is_archived=True).order_by('-created_at')
     serializer = PublicationSerializer(queryset, many=True, context={'request': request})
     return Response(serializer.data)
 
