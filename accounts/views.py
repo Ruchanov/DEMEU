@@ -248,7 +248,7 @@ def request_password_reset(request):
 
 
 @api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
+@permission_classes([permissions.AllowAny])
 def reset_password(request, token):
     try:
         token_hash = hashlib.sha256(token.encode()).hexdigest()
