@@ -29,7 +29,7 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = [
-    'api_demeu.onrender.com',  # или своё имя
+    'api-demeu.onrender.com',  # или своё имя
 ]
 
 
