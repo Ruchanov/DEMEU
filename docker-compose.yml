@@ -3,7 +3,7 @@ version: '3.9'
 services:
   web:
     build: .
-    command: python manage.py runserver
+    command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
     ports:
@@ -12,3 +12,37 @@ services:
       - .env
     environment:
       - DJANGO_SETTINGS_MODULE=demeu.settings
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:15
+    ports:
+      - "5454:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+
+  redis:
+    image: redis:latest
+    restart: always
+
+  celery:
+    build: .
+    command: celery -A demeu worker --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - web
+
+volumes:
+  postgres_data:

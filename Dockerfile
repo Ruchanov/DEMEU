@@ -1,29 +1,39 @@
-# Use official Python image
+# Используем официальный образ Python
 FROM python:3.11-slim
 
-# Set environment variables
+# Переменные среды
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Set work directory
+# Устанавливаем рабочую директорию
 WORKDIR /app
 
-# Install system dependencies
+# Системные зависимости
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
-     libgl1-mesa-glx \
+    gcc \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxrender1 \
+    libxext6 \
+    poppler-utils \
+    tesseract-ocr \
+    tesseract-ocr-rus \
+    tesseract-ocr-kaz \
+    tesseract-ocr-eng \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy only requirements and install first (for caching)
+# Копируем зависимости и устанавливаем их
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Copy the project (excluding venv)
+# Копируем всё приложение
 COPY . .
 
-# Expose Django default port
+# Открываем порт Django
 EXPOSE 8000
 
-# Start Django dev server
-CMD ["python", "manage.py", "runserver"]
+# Команда по умолчанию
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
