@@ -143,15 +143,15 @@ def process_document_verification(document_id):
             notify_user(
                 user=publication.author,
                 verb="✅ Ваша публикация была одобрена",
-                target=f"Публикация: {publication.title}",
-                url=f"http://localhost:8000/publications/{publication.id}/"
+                target=f"Публикация: {publication.title} — документ «{document.get_document_type_display()}»",
+                url=f"/publications/{publication.id}/"
             )
         elif publication.verification_status == 'rejected':
             notify_user(
                 user=publication.author,
                 verb="❌ Ваша публикация была отклонена",
-                target=f"Публикация: {publication.title}",
-                url=f"http://localhost:8000/publications/{publication.id}/"
+                target=f"Публикация: {publication.title} — документ «{document.get_document_type_display()}»",
+                url=f"/publications/{publication.id}/"
             )
 
     except Exception as e:
