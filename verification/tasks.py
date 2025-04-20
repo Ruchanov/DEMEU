@@ -12,7 +12,7 @@ from verification.services.ner import extract_entities
 from verification.services.classifier import guess_document_type
 from verification.services.validation import validate_document_content
 from publications.utils import send_email_dynamic
-
+from notifications.utils import notify_user
 
 def preprocess_image(file_path):
     if file_path.lower().endswith('.pdf'):
@@ -137,6 +137,22 @@ def process_document_verification(document_id):
             publication.status = 'pending'
 
         publication.save()
+
+        # Отправка уведомления пользователю
+        if publication.verification_status == 'approved':
+            notify_user(
+                user=publication.author,
+                verb="✅ Ваша публикация была одобрена",
+                target=f"Публикация: {publication.title}",
+                url=f"http://localhost:8000/publications/{publication.id}/"
+            )
+        elif publication.verification_status == 'rejected':
+            notify_user(
+                user=publication.author,
+                verb="❌ Ваша публикация была отклонена",
+                target=f"Публикация: {publication.title}",
+                url=f"http://localhost:8000/publications/{publication.id}/"
+            )
 
     except Exception as e:
         document.verified = False

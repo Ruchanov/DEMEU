@@ -28,6 +28,7 @@ urlpatterns = [
     path('favorites/', include('favorites.urls')),
     path('info/', include('info.urls')),
     path('auth/google/', include('google_auth.urls')),
+    path('notifications/', include('notifications.urls')),
 ]
 
 # Добавляем маршруты для обработки медиафайлов (например, аватары)

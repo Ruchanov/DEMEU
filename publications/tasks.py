@@ -30,3 +30,43 @@ def check_publication_status():
     old_archived.delete()
     if count:
         print(f"[🗑] Удалено {count} архивных публикаций старше 3 месяцев.")
+
+
+@shared_task
+def notify_expiring_publications():
+    from django.utils import timezone
+    from datetime import timedelta
+    from publications.models import Publication
+    from notifications.utils import notify_user
+
+    now = timezone.now()
+    tomorrow = now + timedelta(days=1)
+    today = now.date()
+
+    # За день до истечения
+    almost_expired = Publication.objects.filter(
+        expires_at__date=tomorrow.date(),
+        status='active',
+    )
+
+    for pub in almost_expired:
+        notify_user(
+            user=pub.author,
+            verb="⏰ Ваша публикация скоро истекает",
+            target=pub.title,
+            url=f"/post/{pub.id}"
+        )
+
+    # В день истечения
+    expiring_today = Publication.objects.filter(
+        expires_at__date=today,
+        status='active',
+    )
+
+    for pub in expiring_today:
+        notify_user(
+            user=pub.author,
+            verb="❗ Сегодня заканчивается срок вашей публикации",
+            target=pub.title,
+            url=f"/post/{pub.id}"
+        )
