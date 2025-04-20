@@ -26,7 +26,7 @@ def notify_top_donor(user, publication):
         user=user,
         verb="🏆 Вы вошли в топ-донатёры публикации",
         target=publication.title,
-        url=f"/post/{publication.id}"
+        url=f"/publications/{publication.id}"
     )
 
 

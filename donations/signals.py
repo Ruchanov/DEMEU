@@ -35,7 +35,7 @@ def notify_new_donation(sender, instance, created, **kwargs):
             user=author,
             verb="💰 Кто-то пожертвовал на вашу публикацию",
             target=f"{donor.first_name} отправил {instance.donor_amount} ₸",
-            url=f"/post/{publication.id}"
+            url=f"/publications/{publication.id}"
         )
 
     # ✅ Уведомление донору, если он входит в топ-3
@@ -64,7 +64,7 @@ def notify_half_goal_reached(sender, instance, created, **kwargs):
             user=author,
             verb="🎯 Ваша публикация достигла 50% цели!",
             target=publication.title,
-            url=f"/post/{publication.id}"
+            url=f"/publications/{publication.id}"
         )
 
 @receiver(post_save, sender=Donation)
@@ -81,5 +81,5 @@ def notify_goal_reached(sender, instance, created, **kwargs):
             user=author,
             verb="🎉 Цель сбора достигнута!",
             target=publication.title,
-            url=f"/post/{publication.id}"
+            url=f"/publications/{publication.id}"
         )
