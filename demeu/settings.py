@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'info',
     'verification',
     'notifications',
+    'certificates',
 ]
 
 MIDDLEWARE = [
