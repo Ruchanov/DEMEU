@@ -15,6 +15,7 @@ from decouple import config
 from datetime import timedelta
 from celery.schedules import crontab
 
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -78,6 +79,9 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
 ]
 
+
+STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY') #Secret Key from test mode
+STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET')
 
 AUTH_USER_MODEL = 'accounts.User'
 
@@ -236,3 +240,6 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+import stripe
+stripe.api_key = STRIPE_SECRET_KEY

@@ -8,6 +8,7 @@ from .serializers import DonationSerializer
 from publications.models import Publication
 from .utils import send_donation_email
 from .tasks import send_donation_email_task
+import stripe
 
 def get_publication_or_404(publication_id):
     #Возвращает публикацию или None, если не найдено.
@@ -84,3 +85,30 @@ def donation_stats(request):
         "total_donated": total_donated,
         "total_donations": donation_count
     })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_payment_intent(request):
+    try:
+        donor_amount = float(request.data.get('donor_amount'))
+        support_percentage = int(request.data.get('support_percentage', 0))
+
+        support_amount = (donor_amount * support_percentage) / 100
+        total_amount = donor_amount + support_amount
+
+        intent = stripe.PaymentIntent.create(
+            amount=int(total_amount * 100),  # Stripe требует сумму в тиынах (копейках)
+            currency='kzt',
+            metadata={
+                'user_id': request.user.id,
+                'donor_amount': donor_amount,
+                'support_percentage': support_percentage,
+                'publication_id': request.data.get('publication_id')
+            }
+        )
+
+        return Response({'client_secret': intent.client_secret})
+
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
