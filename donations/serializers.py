@@ -6,6 +6,9 @@ class DonationSerializer(serializers.ModelSerializer):
     donor_id = serializers.SerializerMethodField()
     donor_name = serializers.SerializerMethodField()
     donor_avatar = serializers.SerializerMethodField()
+    support_amount = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    total_amount = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Donation
@@ -19,9 +22,7 @@ class DonationSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if obj.donor and hasattr(obj.donor, 'profile') and obj.donor.profile.avatar:
             avatar_url = obj.donor.profile.avatar.url
-            if request:
-                return request.build_absolute_uri(avatar_url)
-            return avatar_url
+            return request.build_absolute_uri(avatar_url) if request else avatar_url
         return None
 
     def get_donor_id(self, obj):

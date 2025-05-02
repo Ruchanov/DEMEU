@@ -7,52 +7,26 @@ from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 from .models import Donation
+from donations.signals import (
+    check_publication_funding,
+    notify_goal_reached,
+    notify_half_goal_reached,
+    notify_new_donation
+)
+from donations.tasks import send_donation_email_task
+from .receipt import generate_donation_receipt
 
-def generate_donation_receipt(donation):
-    buffer = BytesIO()
-    pdf = canvas.Canvas(buffer, pagesize=letter)
+def handle_donation_created(donation):
+    """
+    Выполняет все необходимые действия после создания пожертвования.
+    Используется как в обычной форме, так и при Stripe-платежах.
+    """
+    check_publication_funding(type(donation), donation, created=True)
+    notify_half_goal_reached(type(donation), donation, created=True)
+    notify_goal_reached(type(donation), donation, created=True)
+    notify_new_donation(type(donation), donation, created=True)
+    send_donation_email_task.delay(donation.id)
 
-    # Styles
-    pdf.setFillColor(colors.red)
-    pdf.setFont("Helvetica-Bold", 20)
-    pdf.drawString(100, 750, "Demeu - Donation Successful")
-
-    # Green Confirmation Bar
-    pdf.setFillColor(colors.green)
-    pdf.rect(100, 720, 400, 25, fill=True, stroke=False)
-    pdf.setFillColor(colors.white)
-    pdf.setFont("Helvetica-Bold", 14)
-    pdf.drawString(180, 728, "Donation Successfully Completed")
-
-    # Donation Details
-    pdf.setFillColor(colors.black)
-    pdf.setFont("Helvetica-Bold", 14)
-    pdf.drawString(100, 690, f"Amount: {donation.donor_amount} KZT")
-    pdf.drawString(300, 690, f"Fee: {donation.support_amount} KZT")
-
-    pdf.setFont("Helvetica", 12)
-    pdf.drawString(100, 670, f"Donation ID: {donation.id}")
-    pdf.drawString(100, 650, f"Date: {donation.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
-
-    donor_name = f"{donation.donor.first_name} {donation.donor.last_name}" if donation.donor else "Anonymous"
-    pdf.drawString(100, 630, f"Donor Name: {donor_name}")
-
-    # Payment Method (Masked)
-    pdf.drawString(100, 610, "From: Kaspi Gold *XXXX")
-
-    # Recipient (Publication Title)
-    pdf.drawString(100, 590, f"To: {donation.publication.title}")
-
-    # Footer
-    pdf.setStrokeColor(colors.gray)
-    pdf.line(100, 570, 400, 570)
-    pdf.setFont("Helvetica-Oblique", 10)
-    pdf.drawString(100, 550, "Thank you for your support!")
-    pdf.drawString(100, 535, "This receipt is automatically generated.")
-
-    pdf.save()
-    buffer.seek(0)
-    return buffer
 
 def send_donation_email(donor, donation):
     subject = "Спасибо за ваше пожертвование!"

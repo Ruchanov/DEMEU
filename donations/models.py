@@ -14,9 +14,9 @@ class Donation(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
 
     def save(self, *args, **kwargs):
-        # Автоматически рассчитывает поддержку и общий платеж перед сохранением
-        self.support_amount = (self.donor_amount * self.support_percentage) / 100
-        self.total_amount = self.donor_amount + self.support_amount
+        if self.donor_amount is not None and self.support_percentage is not None:
+            self.support_amount = (self.donor_amount * self.support_percentage) / 100
+            self.total_amount = self.donor_amount + self.support_amount
         super().save(*args, **kwargs)
 
     def __str__(self):

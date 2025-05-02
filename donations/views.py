@@ -9,6 +9,7 @@ from publications.models import Publication
 from .utils import send_donation_email
 from .tasks import send_donation_email_task
 import stripe
+from donations.utils import handle_donation_created
 
 def get_publication_or_404(publication_id):
     #Возвращает публикацию или None, если не найдено.
@@ -21,7 +22,6 @@ def get_publication_or_404(publication_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def donation_create(request, publication_id):
-    # Создание пожертвования и отправка чека на email."""
     publication = get_publication_or_404(publication_id)
     if not publication:
         return Response({"error": "Publication not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -33,14 +33,35 @@ def donation_create(request, publication_id):
     if serializer.is_valid():
         donation = serializer.save(publication=publication, donor=request.user)
 
-        # # Отправляем чек на email
-        # send_donation_email(request.user, donation)
-
-        send_donation_email_task.delay(donation.id)
+        # ✅ Унифицированная логика обработки доната
+        handle_donation_created(donation)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def donation_create(request, publication_id):
+#     # Создание пожертвования и отправка чека на email."""
+#     publication = get_publication_or_404(publication_id)
+#     if not publication:
+#         return Response({"error": "Publication not found."}, status=status.HTTP_404_NOT_FOUND)
+#
+#     data = request.data.copy()
+#     data['donor'] = request.user.id
+#
+#     serializer = DonationSerializer(data=data, context={'request': request})
+#     if serializer.is_valid():
+#         donation = serializer.save(publication=publication, donor=request.user)
+#
+#         # # Отправляем чек на email
+#         # send_donation_email(request.user, donation)
+#
+#         send_donation_email_task.delay(donation.id)
+#
+#         return Response(serializer.data, status=status.HTTP_201_CREATED)
+#
+#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

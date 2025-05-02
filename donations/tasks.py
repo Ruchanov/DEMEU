@@ -2,8 +2,7 @@ from celery import shared_task
 from django.core.mail import EmailMessage
 from django.conf import settings
 from .models import Donation
-from .utils import generate_donation_receipt
-
+from .receipt import generate_donation_receipt
 
 @shared_task
 def send_donation_email_task(donation_id):
