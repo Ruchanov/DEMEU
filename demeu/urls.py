@@ -17,6 +17,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from donations.stripe_webhooks import stripe_webhook
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,6 +31,7 @@ urlpatterns = [
     path('auth/google/', include('google_auth.urls')),
     path('notifications/', include('notifications.urls')),
     path('certificates/', include('certificates.urls')),
+    path('api/stripe/webhook/', stripe_webhook),
 ]
 
 # Добавляем маршруты для обработки медиафайлов (например, аватары)
