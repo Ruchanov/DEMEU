@@ -8,7 +8,7 @@ def notify_new_comment(sender, instance, created, **kwargs):
     if created:
         publication = instance.publication
         author = publication.author
-        commenter = instance.user
+        commenter = instance.author
 
         if author != commenter:
             notify_user(
