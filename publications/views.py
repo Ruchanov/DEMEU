@@ -115,8 +115,16 @@ def publication_detail(request, pk):
     except Publication.DoesNotExist:
         return Response({"error": "Publication not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    if publication.status in ['pending', 'expired', 'successful'] and request.user != publication.author:
-        return Response({"error": "This publication is not available."}, status=status.HTTP_403_FORBIDDEN)
+    if request.method == 'GET':
+        if publication.status != 'active' and request.user != publication.author:
+            return Response({"error": "This publication is not available."}, status=status.HTTP_403_FORBIDDEN)
+
+        if request.user.is_authenticated:
+            if not View.objects.filter(publication=publication, viewer=request.user).exists():
+                View.objects.create(publication=publication, viewer=request.user)
+
+        serializer = PublicationSerializer(publication, context={'request': request})
+        return Response(serializer.data)
 
     publication.donation_percentage = (publication.total_donated or 0) / (publication.amount or 1) * 100
 
