@@ -116,7 +116,8 @@ def publication_detail(request, pk):
         return Response({"error": "Publication not found."}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
-        if publication.status != 'active' and request.user != publication.author:
+        donors = [donation.donor.email for donation in publication.donations.all()]
+        if publication.status != 'active' and (request.user != publication.author and request.user.email not in donors):
             return Response({"error": "This publication is not available."}, status=status.HTTP_403_FORBIDDEN)
 
         if request.user.is_authenticated:
