@@ -5,6 +5,7 @@ from rest_framework import status
 from .models import UserCertificate
 from django.contrib.auth import get_user_model
 from .utils import send_certificate_email
+from .services import assign_certificate
 
 User = get_user_model()
 
@@ -13,6 +14,7 @@ User = get_user_model()
 def certificate_public_view(request, user_id):
     try:
         user = User.objects.get(id=user_id)
+        assign_certificate(user)
         certificate = UserCertificate.objects.get(user=user)
 
         data = {
